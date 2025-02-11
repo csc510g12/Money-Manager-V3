@@ -4,6 +4,7 @@ This module provides user-related API routes for the Money Manager application.
 
 import datetime
 from typing import Optional
+from uuid import uuid4
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -11,7 +12,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel
-
+from loguru import logger
 from api.utils.auth import verify_token
 from config.config import MONGO_URI, TOKEN_ALGORITHM, TOKEN_SECRET_KEY
 
@@ -79,10 +80,17 @@ async def create_user(user: UserCreate):
 
     default_currencies = ["USD", "INR", "GBP", "EUR"]
 
+    salt = str(uuid4())[-12:]
+    user.password = f"{user.password}{salt}"  # append salt
+    query_password = f"{hash(user.password)}{salt}"  # hash
+    logger.debug(
+        f"Salt: {salt}, Password: {user.password}, Hashed+salt: {query_password}"
+    ) # disable debug in production
+
     # Insert the new user
     user_data = {
         "username": user.username,
-        "password": user.password,  # In a real application, you should hash the password
+        "password": query_password,  # hash
         "categories": default_categories,
         "currencies": default_currencies,
     }
@@ -132,8 +140,13 @@ async def update_user(user_update: UserUpdate, token: str = Header(None)):
         raise HTTPException(status_code=404, detail="User not found")
 
     if "password" in update_fields and update_fields["password"]:
-        # In a real application, you should hash the password
-        update_fields["password"] = update_fields["password"]
+        salt = str(uuid4())[-12:]
+        query_password = f"{update_fields['password']}{salt}"  # append salt
+        query_password = f"{hash(query_password)}{salt}"  # hash
+        update_fields["password"] = query_password
+        logger.debug(
+            f"Salt: {salt}, Password: {update_fields['password']}, Hashed+salt: {query_password}"
+        ) # disable debug in production
 
     if "currencies" in update_fields and isinstance(update_fields["currencies"], list):
         new_currencies = list(
@@ -175,7 +188,13 @@ async def create_token(
 ):
     """Create an access token for a user."""
     user = await users_collection.find_one({"username": form_data.username})
-    if not user or user["password"] != form_data.password:
+    salt = str(user["password"])[-12:]
+    query_password = f"{hash(form_data.password+salt)}{salt}"
+    logger.debug(
+        f"Salt: {salt}, Password: {form_data.password}, Hashed+salt: {query_password}\n real password: {user['password']}"
+    ) # disable debug in production
+
+    if not user or user["password"] != query_password:
         raise HTTPException(status_code=401, detail="Incorrect username or password")
 
     access_token_expires = datetime.timedelta(minutes=token_expires)
