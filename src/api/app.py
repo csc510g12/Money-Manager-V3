@@ -4,6 +4,7 @@ This module defines the main FastAPI application for Money Manager.
 
 from contextlib import asynccontextmanager
 
+from fastapi.responses import RedirectResponse
 import uvicorn
 from fastapi import FastAPI
 
@@ -19,7 +20,18 @@ async def lifespan(_app: FastAPI):
     await users.shutdown_db_client()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    description="API documentation for Money Manager application",
+    version="1.0.0",
+    docs_url="/docs",  # Default Swagger UI endpoint
+    redoc_url="/redoc",  # Alternative API documentation using ReDoc
+    openapi_url="/openapi.json",  # OpenAPI schema JSON file
+)
+
+@app.get("/", include_in_schema=False)
+async def redirect_to_docs():
+    return RedirectResponse(url="/docs")
 
 # Include routers for different functionalities
 app.include_router(users.router)
