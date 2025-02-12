@@ -8,27 +8,38 @@ from api.app import app
 
 @pytest.mark.anyio
 class TestNoExpenses:
-    async def test_expense_bar_no_expenses(self, async_client_auth: AsyncClient):
+    async def test_expense_bar_no_expenses(
+        self, async_client_auth: AsyncClient
+    ):
         response = await async_client_auth.get(
             "/analytics/expense/bar",
             params={
                 "from_date": datetime.now().date().isoformat(),
-                "to_date": (datetime.now() + timedelta(days=7)).date().isoformat(),
+                "to_date": (datetime.now() + timedelta(days=7))
+                .date()
+                .isoformat(),
             },
         )
         assert response.status_code == 404
         assert response.json()["detail"] == "No expenses found"
 
-    async def test_category_pie_no_expenses(self, async_client_auth: AsyncClient):
+    async def test_category_pie_no_expenses(
+        self, async_client_auth: AsyncClient
+    ):
         response = await async_client_auth.get(
             "/analytics/category/pie",
             params={
                 "from_date": datetime.now().date().isoformat(),
-                "to_date": (datetime.now() + timedelta(days=7)).date().isoformat(),
+                "to_date": (datetime.now() + timedelta(days=7))
+                .date()
+                .isoformat(),
             },
         )
         assert response.status_code == 404
-        assert response.json()["detail"] == "No expenses found for the specified period"
+        assert (
+            response.json()["detail"]
+            == "No expenses found for the specified period"
+        )
 
 
 @pytest.mark.anyio
@@ -76,7 +87,9 @@ class TestAnalyticsCharts:
         response = await async_client_auth.get(
             "/analytics/expense/bar",
             params={
-                "from_date": (datetime.now() - timedelta(days=7)).date().isoformat(),
+                "from_date": (datetime.now() - timedelta(days=7))
+                .date()
+                .isoformat(),
                 "to_date": datetime.now().date().isoformat(),
             },
         )
@@ -87,7 +100,9 @@ class TestAnalyticsCharts:
         response = await async_client_auth.get(
             "/analytics/category/pie",
             params={
-                "from_date": (datetime.now() - timedelta(days=7)).date().isoformat(),
+                "from_date": (datetime.now() - timedelta(days=7))
+                .date()
+                .isoformat(),
                 "to_date": datetime.now().date().isoformat(),
             },
         )
@@ -98,7 +113,9 @@ class TestAnalyticsCharts:
         response = await async_client_auth.get(
             "/analytics/expense/line-monthly",
             params={
-                "from_date": (datetime.now() - timedelta(days=30)).date().isoformat(),
+                "from_date": (datetime.now() - timedelta(days=30))
+                .date()
+                .isoformat(),
                 "to_date": datetime.now().date().isoformat(),
             },
         )
@@ -109,18 +126,24 @@ class TestAnalyticsCharts:
         response = await async_client_auth.get(
             "/analytics/category/bar",
             params={
-                "from_date": (datetime.now() - timedelta(days=7)).date().isoformat(),
+                "from_date": (datetime.now() - timedelta(days=7))
+                .date()
+                .isoformat(),
                 "to_date": datetime.now().date().isoformat(),
             },
         )
         assert response.status_code == 200
         assert response.headers["content-type"] == "image/png"
 
-    async def test_budget_vs_actual_success(self, async_client_auth: AsyncClient):
+    async def test_budget_vs_actual_success(
+        self, async_client_auth: AsyncClient
+    ):
         response = await async_client_auth.get(
             "/analytics/budget/actual-vs-budget",
             params={
-                "from_date": (datetime.now() - timedelta(days=30)).date().isoformat(),
+                "from_date": (datetime.now() - timedelta(days=30))
+                .date()
+                .isoformat(),
                 "to_date": datetime.now().date().isoformat(),
             },
         )
@@ -147,7 +170,9 @@ class TestAnalyticsEdgeCases:
             "/analytics/expense/bar",
             params={
                 "from_date": datetime.now().date().isoformat(),
-                "to_date": (datetime.now() - timedelta(days=7)).date().isoformat(),
+                "to_date": (datetime.now() - timedelta(days=7))
+                .date()
+                .isoformat(),
             },
         )
         assert response.status_code == 422  # Date validation error
@@ -157,12 +182,19 @@ class TestAnalyticsEdgeCases:
         response = await async_client_auth.get(
             "/analytics/category/pie",
             params={
-                "from_date": (datetime.now() + timedelta(days=1)).date().isoformat(),
-                "to_date": (datetime.now() + timedelta(days=7)).date().isoformat(),
+                "from_date": (datetime.now() + timedelta(days=1))
+                .date()
+                .isoformat(),
+                "to_date": (datetime.now() + timedelta(days=7))
+                .date()
+                .isoformat(),
             },
         )
         assert response.status_code == 404
-        assert response.json()["detail"] == "No expenses found for the specified period"
+        assert (
+            response.json()["detail"]
+            == "No expenses found for the specified period"
+        )
 
 
 @pytest.mark.anyio
@@ -186,7 +218,10 @@ class TestAnalyticsAuthentication:
                 },
             )
             assert response.status_code == 401
-            assert response.json()["detail"] == "Invalid authentication credentials"
+            assert (
+                response.json()["detail"]
+                == "Invalid authentication credentials"
+            )
 
     async def test_missing_token(self, async_client: AsyncClient):
         """Test endpoints without token."""
@@ -197,12 +232,16 @@ class TestAnalyticsAuthentication:
 
 @pytest.mark.anyio
 class TestAnalyticsBudget:
-    async def test_budget_calculation_empty_user(self, async_client_auth: AsyncClient):
+    async def test_budget_calculation_empty_user(
+        self, async_client_auth: AsyncClient
+    ):
         """Test budget vs actual for user without budget settings."""
         response = await async_client_auth.get(
             "/analytics/budget/actual-vs-budget",
             params={
-                "from_date": (datetime.now() - timedelta(days=30)).date().isoformat(),
+                "from_date": (datetime.now() - timedelta(days=30))
+                .date()
+                .isoformat(),
                 "to_date": datetime.now().date().isoformat(),
             },
         )
@@ -243,7 +282,11 @@ class TestAnalyticsBudget:
         from_date, to_date, first_expense_date, last_expense_date = test_input
         monthly_budget = 300.0
         result = prorate_budget(
-            monthly_budget, from_date, to_date, first_expense_date, last_expense_date
+            monthly_budget,
+            from_date,
+            to_date,
+            first_expense_date,
+            last_expense_date,
         )
         assert (
             abs(result - (expected * (monthly_budget / 30))) < 0.01
@@ -257,7 +300,10 @@ class TestAnalyticsDateValidation:
         today = datetime.now().date()
         response = await async_client_auth.get(
             "/analytics/expense/bar",
-            params={"from_date": today.isoformat(), "to_date": today.isoformat()},
+            params={
+                "from_date": today.isoformat(),
+                "to_date": today.isoformat(),
+            },
         )
         assert response.status_code in [
             200,

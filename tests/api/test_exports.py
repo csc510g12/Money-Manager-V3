@@ -62,10 +62,12 @@ def mock_db(monkeypatch):
     ]
 
     monkeypatch.setattr(
-        "api.routers.exports.expenses_collection", MockCollection(expenses_data)
+        "api.routers.exports.expenses_collection",
+        MockCollection(expenses_data),
     )
     monkeypatch.setattr(
-        "api.routers.exports.accounts_collection", MockCollection(accounts_data)
+        "api.routers.exports.accounts_collection",
+        MockCollection(accounts_data),
     )
     monkeypatch.setattr(
         "api.routers.exports.users_collection", MockCollection(users_data)
@@ -91,9 +93,15 @@ def mock_db_no_data(monkeypatch):
         async def find_one(self, query):
             return None
 
-    monkeypatch.setattr("api.routers.exports.expenses_collection", MockCollection([]))
-    monkeypatch.setattr("api.routers.exports.accounts_collection", MockCollection([]))
-    monkeypatch.setattr("api.routers.exports.users_collection", MockCollection([]))
+    monkeypatch.setattr(
+        "api.routers.exports.expenses_collection", MockCollection([])
+    )
+    monkeypatch.setattr(
+        "api.routers.exports.accounts_collection", MockCollection([])
+    )
+    monkeypatch.setattr(
+        "api.routers.exports.users_collection", MockCollection([])
+    )
 
 
 @pytest.fixture
@@ -138,9 +146,12 @@ def mock_db_no_accounts(monkeypatch):
     ]
 
     monkeypatch.setattr(
-        "api.routers.exports.expenses_collection", MockCollection(expenses_data)
+        "api.routers.exports.expenses_collection",
+        MockCollection(expenses_data),
     )
-    monkeypatch.setattr("api.routers.exports.accounts_collection", MockCollection([]))
+    monkeypatch.setattr(
+        "api.routers.exports.accounts_collection", MockCollection([])
+    )
     monkeypatch.setattr(
         "api.routers.exports.users_collection", MockCollection(users_data)
     )
@@ -194,10 +205,12 @@ def mock_db_no_categories(monkeypatch):
     ]
 
     monkeypatch.setattr(
-        "api.routers.exports.expenses_collection", MockCollection(expenses_data)
+        "api.routers.exports.expenses_collection",
+        MockCollection(expenses_data),
     )
     monkeypatch.setattr(
-        "api.routers.exports.accounts_collection", MockCollection(accounts_data)
+        "api.routers.exports.accounts_collection",
+        MockCollection(accounts_data),
     )
     monkeypatch.setattr(
         "api.routers.exports.users_collection", MockCollection(users_data)
@@ -213,10 +226,13 @@ class TestXLSXExport:
         )
         assert response.status_code == 200
         assert (
-            response.headers["Content-Disposition"] == "attachment; filename=data.xlsx"
+            response.headers["Content-Disposition"]
+            == "attachment; filename=data.xlsx"
         )
 
-    async def test_data_to_xlsx_no_data(self, mock_db_no_data, async_client_auth):
+    async def test_data_to_xlsx_no_data(
+        self, mock_db_no_data, async_client_auth
+    ):
         response = await async_client_auth.get(
             "/exports/xlsx",
             params={"from_date": "2024-01-01", "to_date": "2024-01-31"},
@@ -224,21 +240,27 @@ class TestXLSXExport:
         assert response.status_code == 404
         assert response.json()["detail"] == "No data found"
 
-    async def test_data_to_xlsx_no_date_range(self, mock_db, async_client_auth):
+    async def test_data_to_xlsx_no_date_range(
+        self, mock_db, async_client_auth
+    ):
         response = await async_client_auth.get("/exports/xlsx")
         assert response.status_code == 200
         assert (
-            response.headers["Content-Disposition"] == "attachment; filename=data.xlsx"
+            response.headers["Content-Disposition"]
+            == "attachment; filename=data.xlsx"
         )
 
-    async def test_data_to_xlsx_only_from_date(self, mock_db, async_client_auth):
+    async def test_data_to_xlsx_only_from_date(
+        self, mock_db, async_client_auth
+    ):
         response = await async_client_auth.get(
             "/exports/xlsx",
             params={"from_date": "2023-01-01"},
         )
         assert response.status_code == 200
         assert (
-            response.headers["Content-Disposition"] == "attachment; filename=data.xlsx"
+            response.headers["Content-Disposition"]
+            == "attachment; filename=data.xlsx"
         )
 
     async def test_data_to_xlsx_only_to_date(self, mock_db, async_client_auth):
@@ -248,20 +270,26 @@ class TestXLSXExport:
         )
         assert response.status_code == 200
         assert (
-            response.headers["Content-Disposition"] == "attachment; filename=data.xlsx"
+            response.headers["Content-Disposition"]
+            == "attachment; filename=data.xlsx"
         )
 
-    async def test_data_to_xlsx_same_from_to_date(self, mock_db, async_client_auth):
+    async def test_data_to_xlsx_same_from_to_date(
+        self, mock_db, async_client_auth
+    ):
         response = await async_client_auth.get(
             "/exports/xlsx",
             params={"from_date": "2023-01-01", "to_date": "2023-01-01"},
         )
         assert response.status_code == 200
         assert (
-            response.headers["Content-Disposition"] == "attachment; filename=data.xlsx"
+            response.headers["Content-Disposition"]
+            == "attachment; filename=data.xlsx"
         )
 
-    async def test_data_to_xlsx_invalid_date_range(self, mock_db, async_client_auth):
+    async def test_data_to_xlsx_invalid_date_range(
+        self, mock_db, async_client_auth
+    ):
         response = await async_client_auth.get(
             "/exports/xlsx",
             params={"from_date": "2023-01-31", "to_date": "2023-01-01"},
@@ -316,7 +344,9 @@ class TestCSVExport:
             == "attachment; filename=categories.csv"
         )
 
-    async def test_data_to_csv_no_data(self, mock_db_no_data, async_client_auth):
+    async def test_data_to_csv_no_data(
+        self, mock_db_no_data, async_client_auth
+    ):
         response = await async_client_auth.get(
             "/exports/csv",
             params={
@@ -339,7 +369,9 @@ class TestCSVExport:
             == "attachment; filename=expenses.csv"
         )
 
-    async def test_data_to_csv_only_from_date(self, mock_db, async_client_auth):
+    async def test_data_to_csv_only_from_date(
+        self, mock_db, async_client_auth
+    ):
         response = await async_client_auth.get(
             "/exports/csv",
             params={"export_type": "expenses", "from_date": "2023-01-01"},
@@ -361,7 +393,9 @@ class TestCSVExport:
             == "attachment; filename=expenses.csv"
         )
 
-    async def test_data_to_csv_same_from_to_date(self, mock_db, async_client_auth):
+    async def test_data_to_csv_same_from_to_date(
+        self, mock_db, async_client_auth
+    ):
         response = await async_client_auth.get(
             "/exports/csv",
             params={
@@ -404,7 +438,9 @@ class TestCSVExport:
         assert response.status_code == 404
         assert response.json()["detail"] == "No categories found"
 
-    async def test_data_to_csv_invalid_date_range(self, mock_db, async_client_auth):
+    async def test_data_to_csv_invalid_date_range(
+        self, mock_db, async_client_auth
+    ):
         response = await async_client_auth.get(
             "/exports/csv",
             params={
@@ -425,10 +461,13 @@ class TestPDFExport:
         )
         assert response.status_code == 200
         assert (
-            response.headers["Content-Disposition"] == "attachment; filename=data.pdf"
+            response.headers["Content-Disposition"]
+            == "attachment; filename=data.pdf"
         )
 
-    async def test_data_to_pdf_no_data(self, mock_db_no_data, async_client_auth):
+    async def test_data_to_pdf_no_data(
+        self, mock_db_no_data, async_client_auth
+    ):
         response = await async_client_auth.get(
             "/exports/pdf",
             params={"from_date": "2024-01-01", "to_date": "2024-01-31"},
@@ -440,17 +479,21 @@ class TestPDFExport:
         response = await async_client_auth.get("/exports/pdf")
         assert response.status_code == 200
         assert (
-            response.headers["Content-Disposition"] == "attachment; filename=data.pdf"
+            response.headers["Content-Disposition"]
+            == "attachment; filename=data.pdf"
         )
 
-    async def test_data_to_pdf_only_from_date(self, mock_db, async_client_auth):
+    async def test_data_to_pdf_only_from_date(
+        self, mock_db, async_client_auth
+    ):
         response = await async_client_auth.get(
             "/exports/pdf",
             params={"from_date": "2023-01-01"},
         )
         assert response.status_code == 200
         assert (
-            response.headers["Content-Disposition"] == "attachment; filename=data.pdf"
+            response.headers["Content-Disposition"]
+            == "attachment; filename=data.pdf"
         )
 
     async def test_data_to_pdf_only_to_date(self, mock_db, async_client_auth):
@@ -460,32 +503,41 @@ class TestPDFExport:
         )
         assert response.status_code == 200
         assert (
-            response.headers["Content-Disposition"] == "attachment; filename=data.pdf"
+            response.headers["Content-Disposition"]
+            == "attachment; filename=data.pdf"
         )
 
-    async def test_data_to_pdf_large_date_range(self, mock_db, async_client_auth):
+    async def test_data_to_pdf_large_date_range(
+        self, mock_db, async_client_auth
+    ):
         response = await async_client_auth.get(
             "/exports/pdf",
             params={"from_date": "2020-01-01", "to_date": "2023-12-31"},
         )
         assert response.status_code == 200
         assert (
-            response.headers["Content-Disposition"] == "attachment; filename=data.pdf"
+            response.headers["Content-Disposition"]
+            == "attachment; filename=data.pdf"
         )
 
-    async def test_data_to_pdf_invalid_date_range(self, mock_db, async_client_auth):
+    async def test_data_to_pdf_invalid_date_range(
+        self, mock_db, async_client_auth
+    ):
         response = await async_client_auth.get(
             "/exports/pdf",
             params={"from_date": "2023-01-31", "to_date": "2023-01-01"},
         )
         assert response.status_code == 422
 
-    async def test_data_to_pdf_same_from_to_date(self, mock_db, async_client_auth):
+    async def test_data_to_pdf_same_from_to_date(
+        self, mock_db, async_client_auth
+    ):
         response = await async_client_auth.get(
             "/exports/pdf",
             params={"from_date": "2023-01-01", "to_date": "2023-01-01"},
         )
         assert response.status_code == 200
         assert (
-            response.headers["Content-Disposition"] == "attachment; filename=data.pdf"
+            response.headers["Content-Disposition"]
+            == "attachment; filename=data.pdf"
         )

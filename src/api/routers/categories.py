@@ -55,10 +55,13 @@ async def create_category(category: CategoryCreate, token: str = Header(None)):
     if category.name in user["categories"]:
         raise HTTPException(status_code=400, detail="Category already exists")
 
-    user["categories"][category.name] = {"monthly_budget": category.monthly_budget}
+    user["categories"][category.name] = {
+        "monthly_budget": category.monthly_budget
+    }
 
     await users_collection.update_one(
-        {"_id": ObjectId(user_id)}, {"$set": {"categories": user["categories"]}}
+        {"_id": ObjectId(user_id)},
+        {"$set": {"categories": user["categories"]}},
     )
 
     return {"message": "Category created successfully"}
@@ -66,7 +69,9 @@ async def create_category(category: CategoryCreate, token: str = Header(None)):
 
 @router.put("/{category_name}")
 async def update_category(
-    category_name: str, category_update: CategoryUpdate, token: str = Header(None)
+    category_name: str,
+    category_update: CategoryUpdate,
+    token: str = Header(None),
 ):
     """
     Update an existing category's monthly budget.
@@ -82,16 +87,25 @@ async def update_category(
     user_id = await verify_token(token)
 
     user = await users_collection.find_one({"_id": ObjectId(user_id)})
-    if not user or "categories" not in user or category_name not in user["categories"]:
+    if (
+        not user
+        or "categories" not in user
+        or category_name not in user["categories"]
+    ):
         raise HTTPException(status_code=404, detail="Category not found")
 
     if category_update.monthly_budget < 0:
-        raise HTTPException(status_code=400, detail="Monthly budget must be positive")
+        raise HTTPException(
+            status_code=400, detail="Monthly budget must be positive"
+        )
 
-    user["categories"][category_name]["monthly_budget"] = category_update.monthly_budget
+    user["categories"][category_name][
+        "monthly_budget"
+    ] = category_update.monthly_budget
 
     await users_collection.update_one(
-        {"_id": ObjectId(user_id)}, {"$set": {"categories": user["categories"]}}
+        {"_id": ObjectId(user_id)},
+        {"$set": {"categories": user["categories"]}},
     )
 
     return {"message": "Category updated successfully"}
@@ -132,7 +146,11 @@ async def get_category(category_name: str, token: str = Header(None)):
     user_id = await verify_token(token)
 
     user = await users_collection.find_one({"_id": ObjectId(user_id)})
-    if not user or "categories" not in user or category_name not in user["categories"]:
+    if (
+        not user
+        or "categories" not in user
+        or category_name not in user["categories"]
+    ):
         raise HTTPException(status_code=404, detail="Category not found")
 
     return {"category": user["categories"][category_name]}
@@ -153,13 +171,18 @@ async def delete_category(category_name: str, token: str = Header(None)):
     user_id = await verify_token(token)
 
     user = await users_collection.find_one({"_id": ObjectId(user_id)})
-    if not user or "categories" not in user or category_name not in user["categories"]:
+    if (
+        not user
+        or "categories" not in user
+        or category_name not in user["categories"]
+    ):
         raise HTTPException(status_code=404, detail="Category not found")
 
     del user["categories"][category_name]
 
     await users_collection.update_one(
-        {"_id": ObjectId(user_id)}, {"$set": {"categories": user["categories"]}}
+        {"_id": ObjectId(user_id)},
+        {"$set": {"categories": user["categories"]}},
     )
 
     return {"message": "Category deleted successfully"}

@@ -33,7 +33,14 @@ def create_expense_bar(
     plt.tight_layout()
 
     for i, value in enumerate(daily_expenses):
-        ax.text(i, value + 0.5, f"{value:.2f}", ha="center", va="bottom", fontsize=10)
+        ax.text(
+            i,
+            value + 0.5,
+            f"{value:.2f}",
+            ha="center",
+            va="bottom",
+            fontsize=10,
+        )
 
     return save_plot_to_buffer()
 
@@ -71,7 +78,9 @@ def create_category_pie(
         "#16a085",  # green sea
     ]
 
-    labels = [f"{cat}\n(${amount:,.2f})" for cat, amount in category_expenses.items()]
+    labels = [
+        f"{cat}\n(${amount:,.2f})" for cat, amount in category_expenses.items()
+    ]
 
     plt.pie(
         category_expenses,
@@ -99,7 +108,9 @@ def create_monthly_line(
 
     date_range_text = get_date_range_text(from_date, to_date)
     total_spend = monthly_expenses.sum()
-    plt.title(f"Monthly Expenses\n{date_range_text}\nTotal Spend: ${total_spend:,.2f}")
+    plt.title(
+        f"Monthly Expenses\n{date_range_text}\nTotal Spend: ${total_spend:,.2f}"
+    )
 
     plt.xlabel("Month")
     plt.ylabel("Total Expense Amount")
@@ -135,7 +146,14 @@ def create_category_bar(
     plt.tight_layout()
 
     for i, value in enumerate(category_expenses):
-        ax.text(i, value + 0.5, f"{value:.2f}", ha="center", va="bottom", fontsize=10)
+        ax.text(
+            i,
+            value + 0.5,
+            f"{value:.2f}",
+            ha="center",
+            va="bottom",
+            fontsize=10,
+        )
 
     return save_plot_to_buffer()
 
@@ -150,10 +168,14 @@ def create_budget_vs_actual(
     df = pd.DataFrame(expenses)
     df["date"] = pd.to_datetime(df["date"])
     category_expenses = df.groupby("category")["amount"].sum()
-    first_expense_date = df["date"].min().date() if not from_date else from_date
+    first_expense_date = (
+        df["date"].min().date() if not from_date else from_date
+    )
     last_expense_date = df["date"].max().date() if not to_date else to_date
 
-    category_names = list(set(category_expenses.index).union(set(categories.keys())))
+    category_names = list(
+        set(category_expenses.index).union(set(categories.keys()))
+    )
     actuals = [category_expenses.get(cat, 0) for cat in category_names]
     budgeted = [
         (

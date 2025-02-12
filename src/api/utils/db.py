@@ -21,8 +21,12 @@ tokens_collection = db.tokens
 
 
 async def fetch_data(
-    user_id: str, from_date: Optional[datetime.date], to_date: Optional[datetime.date]
-) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], Optional[Dict[str, Any]]]:
+    user_id: str,
+    from_date: Optional[datetime.date],
+    to_date: Optional[datetime.date],
+) -> Tuple[
+    List[Dict[str, Any]], List[Dict[str, Any]], Optional[Dict[str, Any]]
+]:
     """
     Fetch user data from the database based on user ID and date range.
     """
@@ -33,9 +37,15 @@ async def fetch_data(
         )
 
     from_dt = (
-        datetime.datetime.combine(from_date, datetime.time.min) if from_date else None
+        datetime.datetime.combine(from_date, datetime.time.min)
+        if from_date
+        else None
     )
-    to_dt = datetime.datetime.combine(to_date, datetime.time.max) if to_date else None
+    to_dt = (
+        datetime.datetime.combine(to_date, datetime.time.max)
+        if to_date
+        else None
+    )
 
     query = {"user_id": user_id}
     if from_dt and to_dt:
@@ -46,7 +56,9 @@ async def fetch_data(
         query["date"] = {"$lte": to_dt}  # type: ignore
 
     expenses = await expenses_collection.find(query).to_list(1000)
-    accounts = await accounts_collection.find({"user_id": user_id}).to_list(100)
+    accounts = await accounts_collection.find({"user_id": user_id}).to_list(
+        100
+    )
     user = await users_collection.find_one({"_id": ObjectId(user_id)})
 
     return expenses, accounts, user

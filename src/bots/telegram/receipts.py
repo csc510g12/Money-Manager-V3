@@ -26,7 +26,9 @@ CONFIRM_DATA = 2
 receipts_handlers = []
 
 
-async def scan_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def scan_receipt(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
     """Start the receipt scanning process."""
     user = await get_user(update)
     if not user:
@@ -52,7 +54,9 @@ async def handle_receipt_photo(
         image = Image.open(io.BytesIO(photo_bytes))
 
         # Send processing message
-        await update.message.reply_text("Processing your receipt... Please wait.")
+        await update.message.reply_text(
+            "Processing your receipt... Please wait."
+        )
 
         # Analyze receipt with Gemini
         prompt = """Analyze this receipt image and extract in JSON format:
@@ -94,7 +98,9 @@ async def handle_receipt_photo(
 
         await update.message.reply_text(
             message,
-            reply_markup=ReplyKeyboardMarkup([["Yes", "No"]], one_time_keyboard=True),
+            reply_markup=ReplyKeyboardMarkup(
+                [["Yes", "No"]], one_time_keyboard=True
+            ),
         )
         return CONFIRM_DATA
 
@@ -104,7 +110,9 @@ async def handle_receipt_photo(
         return ConversationHandler.END
 
 
-async def confirm_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def confirm_data(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
     """Handle user confirmation of extracted data."""
     response = update.message.text.lower()
 
@@ -143,7 +151,9 @@ async def confirm_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
                     reply_markup=ReplyKeyboardRemove(),
                 )
             else:
-                raise Exception(api_response.get("message", "Failed to save expense"))
+                raise Exception(
+                    api_response.get("message", "Failed to save expense")
+                )
 
         except Exception as e:
             logger.error(f"Failed to save expense: {str(e)}")
@@ -166,7 +176,9 @@ receipt_conv_handler = ConversationHandler(
     entry_points=[CommandHandler("scanreceipt", scan_receipt)],
     states={
         UPLOAD_PHOTO: [MessageHandler(filters.PHOTO, handle_receipt_photo)],
-        CONFIRM_DATA: [MessageHandler(filters.TEXT & ~filters.COMMAND, confirm_data)],
+        CONFIRM_DATA: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, confirm_data)
+        ],
     },
     fallbacks=[CommandHandler("cancel", lambda u, c: ConversationHandler.END)],
 )

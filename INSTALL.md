@@ -1,14 +1,18 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [MoneyManager Installation Guide](#moneymanager-installation-guide)
+  - [Installation Steps](#installation-steps)
+  - [Fill in the config](#fill-in-the-config)
+  - [Running the Project for Development](#running-the-project-for-development)
+  - [Development Notes](#development-notes)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 # MoneyManager Installation Guide
 
 Welcome to the **MoneyManagerV2** project! This guide will help you set up the environment and install dependencies to get started.
-
-## Prerequisites
-
-Before beginning the installation, please ensure you hav e the following installed:
-
-- **Python** (version 3.10 or higher)
-- **Git** (to clone the repository)
-- **Docker** (optional, for self hosted MongoDB)
 
 ## Installation Steps
 
@@ -82,9 +86,15 @@ scripts/dev.sh
 
 It should open a new tmux session with the application running in the first window and the bot running in the second window.
 
-## Running Pytest
+## Development Notes
 
-To run the tests, ensure Docker is running and then use:
+Please install pre-commit hooks to ensure code quality and consistency:
+
+```bash
+uv run pre-commit install
+```
+
+To run the tests:
 
 ```bash
 uv run pytest

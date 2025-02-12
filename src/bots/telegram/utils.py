@@ -39,12 +39,18 @@ def get_menu_commands() -> str:
             "pattern": re.compile(r"^(login|signup|logout)$"),
             "commands": [],
         },
-        "Expense Commands": {"pattern": re.compile(r"^expenses_"), "commands": []},
+        "Expense Commands": {
+            "pattern": re.compile(r"^expenses_"),
+            "commands": [],
+        },
         "Categories|Budget Commands": {
             "pattern": re.compile(r"^categories_"),
             "commands": [],
         },
-        "Accounts Commands": {"pattern": re.compile(r"^accounts_"), "commands": []},
+        "Accounts Commands": {
+            "pattern": re.compile(r"^accounts_"),
+            "commands": [],
+        },
         "Other Commands": {"pattern": re.compile(r".*"), "commands": []},
     }
 
@@ -62,6 +68,8 @@ def get_menu_commands() -> str:
             if group == "Helper Commands":
                 pretty_commands += "\n".join(data["commands"]) + "\n\n"
             else:
-                pretty_commands += f"{group}:\n" + "\n".join(data["commands"]) + "\n\n"
+                pretty_commands += (
+                    f"{group}:\n" + "\n".join(data["commands"]) + "\n\n"
+                )
 
     return f"Here are the available commands:\n\n{pretty_commands.strip()}"

@@ -21,7 +21,8 @@ class TestUserCreation:
 
     async def test_valid(self, async_client: AsyncClient):
         response = await async_client.post(
-            "/users/", json={"username": "usertestuser", "password": "usertestpassword"}
+            "/users/",
+            json={"username": "usertestuser", "password": "usertestpassword"},
         )
         assert response.status_code == 200, response.json()
         assert (
@@ -31,7 +32,8 @@ class TestUserCreation:
 
     async def test_duplicate(self, async_client: AsyncClient):
         response = await async_client.post(
-            "/users/", json={"username": "usertestuser", "password": "usertestpassword"}
+            "/users/",
+            json={"username": "usertestuser", "password": "usertestpassword"},
         )
         assert response.status_code == 400
         assert response.json()["detail"] == "Username already exists"
@@ -53,7 +55,9 @@ class TestUserCreation:
 
 @pytest.mark.anyio
 class TestTokenCreation:
-    async def test_create_token_invalid_credentials(self, async_client: AsyncClient):
+    async def test_create_token_invalid_credentials(
+        self, async_client: AsyncClient
+    ):
         response = await async_client.post(
             "/users/token/",
             data={"username": "usertestuser", "password": "wrongpassword"},
@@ -87,9 +91,13 @@ class TestTokenCreation:
         assert response.json()["result"]["token_type"] == "bearer"
         # Save token for future tests
         # async_client.headers.update({"Authorization": f"Bearer {response.json()['result']['token']}"})
-        async_client.headers.update({"token": response.json()["result"]["token"]})
+        async_client.headers.update(
+            {"token": response.json()["result"]["token"]}
+        )
 
-    async def test_create_token_missing_username(self, async_client: AsyncClient):
+    async def test_create_token_missing_username(
+        self, async_client: AsyncClient
+    ):
         response = await async_client.post(
             "/users/token/",
             data={"username": "", "password": "password"},
@@ -97,7 +105,9 @@ class TestTokenCreation:
         assert response.status_code == 401
         assert response.json()["detail"] == "Incorrect username or password"
 
-    async def test_create_token_missing_password(self, async_client: AsyncClient):
+    async def test_create_token_missing_password(
+        self, async_client: AsyncClient
+    ):
         response = await async_client.post(
             "/users/token/",
             data={"username": "username", "password": ""},
@@ -130,7 +140,9 @@ class TestTokenGetter:
             "exp": datetime.datetime.now(datetime.timezone.utc)
             - datetime.timedelta(minutes=1),
         }
-        expired_token = jwt.encode(payload, TOKEN_SECRET_KEY, algorithm=TOKEN_ALGORITHM)
+        expired_token = jwt.encode(
+            payload, TOKEN_SECRET_KEY, algorithm=TOKEN_ALGORITHM
+        )
         headers = {"token": expired_token}
 
         # Try to access user details with the expired token
@@ -149,7 +161,10 @@ class TestTokenUpdate:
             f"/users/token/{token_id}", params={"new_expiry": 60}
         )
         assert response.status_code == 200, response.json()
-        assert response.json()["message"] == "Token expiration updated successfully"
+        assert (
+            response.json()["message"]
+            == "Token expiration updated successfully"
+        )
 
 
 @pytest.mark.anyio
@@ -189,7 +204,9 @@ class TestUserUpdate:
         assert response.json()["detail"] == "Failed to update user"
 
     async def test_invalid_input(self, async_client: AsyncClient):
-        response = await async_client.put("/users/", json={"invalid?": "haha..."})
+        response = await async_client.put(
+            "/users/", json={"invalid?": "haha..."}
+        )
         assert response.status_code == 500, response.json()
         assert response.json()["detail"] == "Failed to update user"
 
@@ -219,7 +236,9 @@ class TestUserUpdate:
 
 @pytest.mark.anyio
 class TestUserUnauthenticated:
-    async def test_login_with_nonexistent_user(self, async_client: AsyncClient):
+    async def test_login_with_nonexistent_user(
+        self, async_client: AsyncClient
+    ):
         # Create a fake token for a nonexistent user
         payload = {
             "sub": None,
@@ -227,7 +246,9 @@ class TestUserUnauthenticated:
             "exp": datetime.datetime.now(datetime.timezone.utc)
             + datetime.timedelta(minutes=30),
         }
-        fake_token = jwt.encode(payload, TOKEN_SECRET_KEY, algorithm=TOKEN_ALGORITHM)
+        fake_token = jwt.encode(
+            payload, TOKEN_SECRET_KEY, algorithm=TOKEN_ALGORITHM
+        )
         headers = {"token": fake_token}
 
         # Try to access user details with the fake token

@@ -39,7 +39,9 @@ async def categories_view(
     """View the list of categories with pagination."""
     headers = {"token": token}
     response = requests.get(
-        f"{TELEGRAM_BOT_API_BASE_URL}/categories/", headers=headers, timeout=TIMEOUT
+        f"{TELEGRAM_BOT_API_BASE_URL}/categories/",
+        headers=headers,
+        timeout=TIMEOUT,
     )
 
     if response.status_code == 200:
@@ -58,7 +60,9 @@ async def categories_view(
             1 if len(sorted_categories) % items_per_page else 0
         )
         paginator = InlineKeyboardPaginator(
-            total_pages, current_page=page, data_pattern="view_categories#{page}"
+            total_pages,
+            current_page=page,
+            data_pattern="view_categories#{page}",
         )
 
         # Get categories for current page
@@ -152,7 +156,9 @@ async def handle_monthly_budget(
             )
         else:
             error_detail = response.json().get("detail", "Unknown error")
-            await update.message.reply_text(f"Failed to add category: {error_detail}")
+            await update.message.reply_text(
+                f"Failed to add category: {error_detail}"
+            )
 
         context.user_data.clear()
         return ConversationHandler.END
@@ -171,7 +177,9 @@ async def categories_delete(
     """Start the category deletion process."""
     headers = {"token": token}
     response = requests.get(
-        f"{TELEGRAM_BOT_API_BASE_URL}/categories/", headers=headers, timeout=TIMEOUT
+        f"{TELEGRAM_BOT_API_BASE_URL}/categories/",
+        headers=headers,
+        timeout=TIMEOUT,
     )
 
     if response.status_code == 200:
@@ -260,7 +268,9 @@ async def categories_update(
     """Start the category update process."""
     headers = {"token": token}
     response = requests.get(
-        f"{TELEGRAM_BOT_API_BASE_URL}/categories/", headers=headers, timeout=TIMEOUT
+        f"{TELEGRAM_BOT_API_BASE_URL}/categories/",
+        headers=headers,
+        timeout=TIMEOUT,
     )
 
     if response.status_code == 200:
@@ -281,7 +291,8 @@ async def categories_update(
 
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text(
-            "Select a category to update its monthly budget:", reply_markup=reply_markup
+            "Select a category to update its monthly budget:",
+            reply_markup=reply_markup,
         )
         return SELECT_CATEGORY
     else:
@@ -348,10 +359,14 @@ categories_conv_handler = ConversationHandler(
     entry_points=[CommandHandler("categories_add", categories_add)],
     states={
         CATEGORY_NAME: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_category_name)
+            MessageHandler(
+                filters.TEXT & ~filters.COMMAND, handle_category_name
+            )
         ],
         MONTHLY_BUDGET: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_monthly_budget)
+            MessageHandler(
+                filters.TEXT & ~filters.COMMAND, handle_monthly_budget
+            )
         ],
     },
     fallbacks=[CommandHandler("cancel", cancel)],
@@ -372,7 +387,9 @@ categories_update_conv_handler = ConversationHandler(
     states={
         SELECT_CATEGORY: [CallbackQueryHandler(handle_category_selection)],
         UPDATE_BUDGET: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_budget_update)
+            MessageHandler(
+                filters.TEXT & ~filters.COMMAND, handle_budget_update
+            )
         ],
     },
     fallbacks=[CommandHandler("cancel", cancel)],

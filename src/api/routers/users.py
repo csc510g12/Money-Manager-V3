@@ -10,9 +10,10 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt
+from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel
-from loguru import logger
+
 from api.utils.auth import verify_token
 from config.config import MONGO_URI, TOKEN_ALGORITHM, TOKEN_SECRET_KEY
 
@@ -56,14 +57,18 @@ def create_access_token(data: dict, expires_delta: datetime.timedelta):
     to_encode = data.copy()
     expire = datetime.datetime.now(datetime.UTC) + expires_delta
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, TOKEN_SECRET_KEY, algorithm=TOKEN_ALGORITHM)
+    encoded_jwt = jwt.encode(
+        to_encode, TOKEN_SECRET_KEY, algorithm=TOKEN_ALGORITHM
+    )
     return encoded_jwt
 
 
 @router.post("/")
 async def create_user(user: UserCreate):
     """Create a new user along with default accounts."""
-    existing_user = await users_collection.find_one({"username": user.username})
+    existing_user = await users_collection.find_one(
+        {"username": user.username}
+    )
     if existing_user:
         raise HTTPException(status_code=400, detail="Username already exists")
     if not user.username or not user.password:
@@ -85,7 +90,7 @@ async def create_user(user: UserCreate):
     query_password = f"{hash(user.password)}{salt}"  # hash
     logger.debug(
         f"Salt: {salt}, Password: {user.password}, Hashed+salt: {query_password}"
-    ) # disable debug in production
+    )  # disable debug in production
 
     # Insert the new user
     user_data = {
@@ -135,7 +140,9 @@ async def update_user(user_update: UserUpdate, token: str = Header(None)):
     """Update user information such as password, currencies."""
     user_id = await verify_token(token)
     update_fields = user_update.dict(exclude_unset=True)
-    user: Optional[dict] = await users_collection.find_one({"_id": ObjectId(user_id)})
+    user: Optional[dict] = await users_collection.find_one(
+        {"_id": ObjectId(user_id)}
+    )
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -146,9 +153,11 @@ async def update_user(user_update: UserUpdate, token: str = Header(None)):
         update_fields["password"] = query_password
         logger.debug(
             f"Salt: {salt}, Password: {update_fields['password']}, Hashed+salt: {query_password}"
-        ) # disable debug in production
+        )  # disable debug in production
 
-    if "currencies" in update_fields and isinstance(update_fields["currencies"], list):
+    if "currencies" in update_fields and isinstance(
+        update_fields["currencies"], list
+    ):
         new_currencies = list(
             set(user.get("currencies", []) + update_fields["currencies"])
         )
@@ -158,14 +167,18 @@ async def update_user(user_update: UserUpdate, token: str = Header(None)):
             {"_id": ObjectId(user_id)}, {"$set": update_fields}
         )
         if result.modified_count == 1:
-            updated_user = await users_collection.find_one({"_id": ObjectId(user_id)})
+            updated_user = await users_collection.find_one(
+                {"_id": ObjectId(user_id)}
+            )
             return {
                 "message": "User updated successfully",
                 "updated_user": format_id(updated_user),
             }
         raise HTTPException(status_code=400, detail="Nothing to modify")
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to update user") from e
+        raise HTTPException(
+            status_code=500, detail="Failed to update user"
+        ) from e
 
 
 @router.delete("/")
@@ -191,11 +204,14 @@ async def create_token(
     salt = str(user["password"])[-12:]
     query_password = f"{hash(form_data.password+salt)}{salt}"
     logger.debug(
-        f"Salt: {salt}, Password: {form_data.password}, Hashed+salt: {query_password}\n real password: {user['password']}"
-    ) # disable debug in production
+        f"Salt: {salt}, Password: {form_data.password}, Hashed+salt: {query_password}\n"
+        "real password: {user['password']}"
+    )  # disable debug in production
 
     if not user or user["password"] != query_password:
-        raise HTTPException(status_code=401, detail="Incorrect username or password")
+        raise HTTPException(
+            status_code=401, detail="Incorrect username or password"
+        )
 
     access_token_expires = datetime.timedelta(minutes=token_expires)
     access_token = create_access_token(
@@ -207,13 +223,16 @@ async def create_token(
         {
             "user_id": str(user["_id"]),
             "token": access_token,
-            "expires_at": datetime.datetime.now(datetime.UTC) + access_token_expires,
+            "expires_at": datetime.datetime.now(datetime.UTC)
+            + access_token_expires,
             "token_type": "bearer",
         },
     )
 
     if result.inserted_id:
-        token_data = await tokens_collection.find_one({"_id": result.inserted_id})
+        token_data = await tokens_collection.find_one(
+            {"_id": result.inserted_id}
+        )
         return {
             "message": "Token created successfully",
             "result": format_id(token_data),
@@ -236,7 +255,9 @@ async def get_tokens(token: str = Header(None)):
     formatted_tokens = [format_id(token) for token in tokens]
     # Convert datetime to ISO format in each token document
     for tok in formatted_tokens:
-        if "expires_at" in tok and isinstance(tok["expires_at"], datetime.datetime):
+        if "expires_at" in tok and isinstance(
+            tok["expires_at"], datetime.datetime
+        ):
             tok["expires_at"] = tok["expires_at"].isoformat()
 
     return {"tokens": formatted_tokens}
@@ -266,13 +287,17 @@ async def get_token(token_id: str, token: str = Header(None)) -> dict:
     if "expires_at" in formatted_token and isinstance(
         formatted_token["expires_at"], datetime.datetime
     ):
-        formatted_token["expires_at"] = formatted_token["expires_at"].isoformat()
+        formatted_token["expires_at"] = formatted_token[
+            "expires_at"
+        ].isoformat()
 
     return formatted_token
 
 
 @router.put("/token/{token_id}")
-async def update_token(token_id: str, new_expiry: float, token: str = Header(None)):
+async def update_token(
+    token_id: str, new_expiry: float, token: str = Header(None)
+):
     """
     Update the expiration time for the current token.
 
@@ -297,7 +322,9 @@ async def update_token(token_id: str, new_expiry: float, token: str = Header(Non
     if result.modified_count == 1:
         return {"message": "Token expiration updated successfully"}
 
-    raise HTTPException(status_code=500, detail="Failed to update token expiration")
+    raise HTTPException(
+        status_code=500, detail="Failed to update token expiration"
+    )
 
 
 @router.delete("/token/{token_id}")

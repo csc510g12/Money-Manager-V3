@@ -17,7 +17,9 @@ async def verify_token(token: str):
     if token is None:
         raise HTTPException(status_code=401, detail="Token is missing")
     try:
-        payload = jwt.decode(token, TOKEN_SECRET_KEY, algorithms=[TOKEN_ALGORITHM])
+        payload = jwt.decode(
+            token, TOKEN_SECRET_KEY, algorithms=[TOKEN_ALGORITHM]
+        )
         user_id = payload.get("sub")
         token_exists = await tokens_collection.find_one(
             {"user_id": user_id, "token": token}
@@ -28,7 +30,9 @@ async def verify_token(token: str):
     except JWTError as e:
         if "Signature has expired" in str(e):
             await tokens_collection.delete_one({"token": token})
-            raise HTTPException(status_code=401, detail="Token has expired") from e
+            raise HTTPException(
+                status_code=401, detail="Token has expired"
+            ) from e
         raise HTTPException(
             status_code=401, detail="Invalid authentication credentials"
         ) from e

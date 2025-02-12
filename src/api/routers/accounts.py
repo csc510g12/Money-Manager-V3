@@ -54,7 +54,9 @@ async def create_account(account: AccountCreate, token: str = Header(None)):
     )
 
     if existing_account:
-        raise HTTPException(status_code=400, detail="Account type already exists")
+        raise HTTPException(
+            status_code=400, detail="Account type already exists"
+        )
 
     account_data = {
         "user_id": user_id,
@@ -85,9 +87,13 @@ async def get_accounts(token: str = Header(None)):
         dict: A list of all accounts for the user.
     """
     user_id = await verify_token(token)
-    accounts = await accounts_collection.find({"user_id": user_id}).to_list(100)
+    accounts = await accounts_collection.find({"user_id": user_id}).to_list(
+        100
+    )
     if not accounts:
-        raise HTTPException(status_code=404, detail="No accounts found for the user")
+        raise HTTPException(
+            status_code=404, detail="No accounts found for the user"
+        )
 
     # Convert ObjectId to string for better readability
     formatted_accounts = [
@@ -190,7 +196,9 @@ async def delete_account(account_id: str, token: str = Header(None)):
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
 
-    result = await accounts_collection.delete_one({"_id": ObjectId(account_id)})
+    result = await accounts_collection.delete_one(
+        {"_id": ObjectId(account_id)}
+    )
 
     if result.deleted_count == 1:
         return {"message": "Account deleted successfully"}

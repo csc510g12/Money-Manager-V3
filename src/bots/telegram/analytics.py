@@ -48,14 +48,27 @@ async def analytics(
 ) -> None:
     """Main analytics command with plot options."""
     keyboard = [
-        [InlineKeyboardButton("Expense Bar Chart", callback_data="plot_expense_bar")],
-        [InlineKeyboardButton("Category Pie Chart", callback_data="plot_category_pie")],
         [
             InlineKeyboardButton(
-                "Monthly Expense Line Chart", callback_data="plot_expense_line_monthly"
+                "Expense Bar Chart", callback_data="plot_expense_bar"
             )
         ],
-        [InlineKeyboardButton("Category Bar Chart", callback_data="plot_category_bar")],
+        [
+            InlineKeyboardButton(
+                "Category Pie Chart", callback_data="plot_category_pie"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "Monthly Expense Line Chart",
+                callback_data="plot_expense_line_monthly",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "Category Bar Chart", callback_data="plot_category_bar"
+            )
+        ],
         [
             InlineKeyboardButton(
                 "Budget vs Actual", callback_data="plot_budget_vs_actual"
@@ -122,12 +135,15 @@ async def show_date_options(
         [
             InlineKeyboardButton("Clear Dates", callback_data="clear_dates")
         ],  # Added Clear Dates
-        [InlineKeyboardButton("Next", callback_data="next")],  # Added Next button
+        [
+            InlineKeyboardButton("Next", callback_data="next")
+        ],  # Added Next button
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     if query:
         await query.message.edit_text(
-            "Would you like to select dates for export?", reply_markup=reply_markup
+            "Would you like to select dates for export?",
+            reply_markup=reply_markup,
         )
     else:
         await update.message.reply_text(
@@ -179,7 +195,9 @@ async def handle_date_selection(
 
     if query.data.startswith("date_"):
         _, year, month, day = query.data.split("_")
-        selected_date = datetime(int(year), int(month), int(day)).strftime("%Y-%m-%d")
+        selected_date = datetime(int(year), int(month), int(day)).strftime(
+            "%Y-%m-%d"
+        )
 
         if "set_both" in context.user_data and context.user_data["set_both"]:
             if "from_date" not in context.user_data:
@@ -210,7 +228,9 @@ async def handle_date_selection(
     return SELECTING_FORMAT
 
 
-async def create_calendar_markup(year: int, month: int) -> InlineKeyboardMarkup:
+async def create_calendar_markup(
+    year: int, month: int
+) -> InlineKeyboardMarkup:
     """Create an inline keyboard with a calendar and year/month navigation"""
     keyboard = []
 
@@ -227,13 +247,15 @@ async def create_calendar_markup(year: int, month: int) -> InlineKeyboardMarkup:
     keyboard.append(
         [
             InlineKeyboardButton(
-                "◀️", callback_data=f"month_{year}_{(month-1) if month > 1 else 12}"
+                "◀️",
+                callback_data=f"month_{year}_{(month-1) if month > 1 else 12}",
             ),
             InlineKeyboardButton(
                 f"{calendar.month_name[month]}", callback_data="ignore"
             ),
             InlineKeyboardButton(
-                "▶️", callback_data=f"month_{year}_{(month+1) if month < 12 else 1}"
+                "▶️",
+                callback_data=f"month_{year}_{(month+1) if month < 12 else 1}",
             ),
         ]
     )
@@ -334,7 +356,9 @@ async def handle_csv_options(
         [InlineKeyboardButton("⬅️", callback_data="back_to_formats")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.message.edit_text("Select CSV export type:", reply_markup=reply_markup)
+    await query.message.edit_text(
+        "Select CSV export type:", reply_markup=reply_markup
+    )
 
 
 async def send_email(email: str, files: list, context: dict) -> bool:
@@ -404,9 +428,7 @@ async def handle_export(
             filename = f"ultimate_analytics_{timestamp}.pdf"
         elif export_type == "export_excel":
             endpoint = "exports/xlsx"
-            mime_type = (
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+            mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             filename = f"all_data_{timestamp}.xlsx"
         elif export_type == "export_email":
             endpoint = "exports/email"
@@ -449,7 +471,9 @@ async def handle_email_input(
 
     # Basic email validation
     if "@" not in email or "." not in email:
-        await update.message.reply_text("Invalid email address. Please try again.")
+        await update.message.reply_text(
+            "Invalid email address. Please try again."
+        )
         return WAITING_EMAIL
 
     try:
@@ -473,7 +497,9 @@ async def handle_email_input(
             timeout=TIMEOUT,
         )
         if response.status_code == 200:
-            export_files.append((f"analytics_{timestamp}.pdf", response.content))
+            export_files.append(
+                (f"analytics_{timestamp}.pdf", response.content)
+            )
 
         # Get Excel
         response = requests.get(
@@ -483,7 +509,9 @@ async def handle_email_input(
             timeout=TIMEOUT,
         )
         if response.status_code == 200:
-            export_files.append((f"all_data_{timestamp}.xlsx", response.content))
+            export_files.append(
+                (f"all_data_{timestamp}.xlsx", response.content)
+            )
 
         # Get CSV files
         csv_types = ["expenses", "accounts", "categories"]
@@ -495,7 +523,9 @@ async def handle_email_input(
                 timeout=TIMEOUT,
             )
             if response.status_code == 200:
-                export_files.append((f"{csv_type}_{timestamp}.csv", response.content))
+                export_files.append(
+                    (f"{csv_type}_{timestamp}.csv", response.content)
+                )
 
         if export_files:
             # Send email with all files
@@ -508,7 +538,9 @@ async def handle_email_input(
                     "❌ Failed to send email. Please try again."
                 )
         else:
-            await update.message.reply_text("❌ No files were generated for export.")
+            await update.message.reply_text(
+                "❌ No files were generated for export."
+            )
 
     except Exception as e:
         await update.message.reply_text(f"❌ Error during export: {str(e)}")
@@ -516,7 +548,9 @@ async def handle_email_input(
     return ConversationHandler.END
 
 
-async def select_from_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def select_from_date(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
     """Send the calendar for selecting the start date."""
     context.user_data["calendar_state"] = SELECTING_FROM_DATE
     current_year = datetime.now().year
@@ -528,7 +562,9 @@ async def select_from_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     return SELECTING_FROM_DATE
 
 
-async def select_to_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def select_to_date(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
     """Send the calendar for selecting the end date."""
     context.user_data["calendar_state"] = SELECTING_TO_DATE
     current_year = datetime.now().year
@@ -559,22 +595,28 @@ analytics_handlers.extend(
                 ],
                 SELECTING_FROM_DATE: [
                     CallbackQueryHandler(
-                        handle_calendar_navigation, pattern="^(year|month)_\d+_\d+$"
+                        handle_calendar_navigation,
+                        pattern="^(year|month)_\d+_\d+$",
                     ),
                     CallbackQueryHandler(
-                        handle_date_selection, pattern="^date_\d{4}_\d{1,2}_\d{1,2}$"
+                        handle_date_selection,
+                        pattern="^date_\d{4}_\d{1,2}_\d{1,2}$",
                     ),
                 ],
                 SELECTING_TO_DATE: [
                     CallbackQueryHandler(
-                        handle_calendar_navigation, pattern="^(year|month)_\d+_\d+$"
+                        handle_calendar_navigation,
+                        pattern="^(year|month)_\d+_\d+$",
                     ),
                     CallbackQueryHandler(
-                        handle_date_selection, pattern="^date_\d{4}_\d{1,2}_\d{1,2}$"
+                        handle_date_selection,
+                        pattern="^date_\d{4}_\d{1,2}_\d{1,2}$",
                     ),
                 ],
                 SELECTING_FORMAT: [
-                    CallbackQueryHandler(handle_csv_options, pattern="^export_csv$"),
+                    CallbackQueryHandler(
+                        handle_csv_options, pattern="^export_csv$"
+                    ),
                     CallbackQueryHandler(
                         handle_export,
                         pattern="^(export_pdf|export_excel|export_email|csv_\w+)$",
@@ -587,7 +629,9 @@ analytics_handlers.extend(
                     ),  # Added handler for Back button
                 ],
                 WAITING_EMAIL: [
-                    MessageHandler(filters.TEXT & ~filters.COMMAND, handle_email_input)
+                    MessageHandler(
+                        filters.TEXT & ~filters.COMMAND, handle_email_input
+                    )
                 ],
             },
             fallbacks=[CommandHandler("cancel", cancel)],
