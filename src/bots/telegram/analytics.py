@@ -1,4 +1,5 @@
 import calendar
+import json
 import smtplib
 from datetime import datetime
 from email.mime.application import MIMEApplication
@@ -98,8 +99,9 @@ async def button_callback(
                 image_bytes = BytesIO(response.content)
                 await query.message.reply_photo(photo=image_bytes)
             else:
+                error_message = json.loads(response.text)
                 await query.message.reply_text(
-                    f"Failed to generate {query.data.replace('_', ' ')}"
+                    f"Failed to generate {query.data.replace('_', ' ')}, because {error_message['detail']}"
                 )
         except Exception as e:
             await query.message.reply_text(f"Error: {str(e)}")
