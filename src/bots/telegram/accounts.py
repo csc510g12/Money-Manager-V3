@@ -42,7 +42,9 @@ async def accounts_view(
     """View the list of accounts with pagination."""
     headers = {"token": token}
     response = requests.get(
-        f"{TELEGRAM_BOT_API_BASE_URL}/accounts/", headers=headers, timeout=TIMEOUT
+        f"{TELEGRAM_BOT_API_BASE_URL}/accounts/",
+        headers=headers,
+        timeout=TIMEOUT,
     )
 
     if response.status_code == 200:
@@ -140,7 +142,9 @@ async def handle_initial_balance(
         # Fetch available currencies
         headers = {"token": token}
         response = requests.get(
-            f"{TELEGRAM_BOT_API_BASE_URL}/users/", headers=headers, timeout=TIMEOUT
+            f"{TELEGRAM_BOT_API_BASE_URL}/users/",
+            headers=headers,
+            timeout=TIMEOUT,
         )
         if response.status_code == 200:
             currencies = response.json().get("currencies", [])
@@ -154,7 +158,11 @@ async def handle_initial_balance(
         keyboard = []
         for currency in currencies:
             keyboard.append(
-                [InlineKeyboardButton(currency, callback_data=f"currency_{currency}")]
+                [
+                    InlineKeyboardButton(
+                        currency, callback_data=f"currency_{currency}"
+                    )
+                ]
             )
 
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -211,7 +219,9 @@ async def accounts_delete(
     """Start the account deletion process."""
     headers = {"token": token}
     response = requests.get(
-        f"{TELEGRAM_BOT_API_BASE_URL}/accounts/", headers=headers, timeout=TIMEOUT
+        f"{TELEGRAM_BOT_API_BASE_URL}/accounts/",
+        headers=headers,
+        timeout=TIMEOUT,
     )
 
     if response.status_code == 200:
@@ -300,7 +310,9 @@ async def accounts_update(
     """Start the account update process."""
     headers = {"token": token}
     response = requests.get(
-        f"{TELEGRAM_BOT_API_BASE_URL}/accounts/", headers=headers, timeout=TIMEOUT
+        f"{TELEGRAM_BOT_API_BASE_URL}/accounts/",
+        headers=headers,
+        timeout=TIMEOUT,
     )
 
     if response.status_code == 200:
@@ -321,7 +333,8 @@ async def accounts_update(
 
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text(
-            "Select an account to update its balance:", reply_markup=reply_markup
+            "Select an account to update its balance:",
+            reply_markup=reply_markup,
         )
         return SELECT_ACCOUNT
     else:
@@ -342,8 +355,12 @@ async def handle_account_selection(
 
         keyboard = [
             [
-                InlineKeyboardButton("Update Name", callback_data="change_name"),
-                InlineKeyboardButton("Update Balance", callback_data="change_balance"),
+                InlineKeyboardButton(
+                    "Update Name", callback_data="change_name"
+                ),
+                InlineKeyboardButton(
+                    "Update Balance", callback_data="change_balance"
+                ),
             ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -390,7 +407,9 @@ async def handle_name_update(
         )
     else:
         error_detail = response.json().get("detail", "Unknown error")
-        await update.message.reply_text(f"❌ Failed to update account: {error_detail}")
+        await update.message.reply_text(
+            f"❌ Failed to update account: {error_detail}"
+        )
 
     context.user_data.clear()
     return ConversationHandler.END
@@ -427,7 +446,9 @@ async def handle_balance_update(
         return ConversationHandler.END
 
     except ValueError:
-        await update.message.reply_text("Please enter a valid number for the balance.")
+        await update.message.reply_text(
+            "Please enter a valid number for the balance."
+        )
         return UPDATE_BALANCE
 
 
@@ -436,10 +457,14 @@ accounts_conv_handler = ConversationHandler(
     entry_points=[CommandHandler("accounts_add", accounts_add)],
     states={
         ACCOUNT_NAME: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_account_name)
+            MessageHandler(
+                filters.TEXT & ~filters.COMMAND, handle_account_name
+            )
         ],
         INITIAL_BALANCE: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_initial_balance)
+            MessageHandler(
+                filters.TEXT & ~filters.COMMAND, handle_initial_balance
+            )
         ],
         SELECT_CURRENCY: [CallbackQueryHandler(handle_currency_selection)],
     },
@@ -460,12 +485,16 @@ accounts_update_conv_handler = ConversationHandler(
     entry_points=[CommandHandler("accounts_update", accounts_update)],
     states={
         SELECT_ACCOUNT: [CallbackQueryHandler(handle_account_selection)],
-        SELECT_UPDATE_TYPE: [CallbackQueryHandler(handle_update_type_selection)],
+        SELECT_UPDATE_TYPE: [
+            CallbackQueryHandler(handle_update_type_selection)
+        ],
         UPDATE_NAME: [
             MessageHandler(filters.TEXT & ~filters.COMMAND, handle_name_update)
         ],
         UPDATE_BALANCE: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_balance_update)
+            MessageHandler(
+                filters.TEXT & ~filters.COMMAND, handle_balance_update
+            )
         ],
     },
     fallbacks=[CommandHandler("cancel", cancel)],

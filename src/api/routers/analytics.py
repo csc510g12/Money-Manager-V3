@@ -55,7 +55,8 @@ async def category_pie(
 
     if not expenses:
         raise HTTPException(
-            status_code=404, detail="No expenses found for the specified period"
+            status_code=404,
+            detail="No expenses found for the specified period",
         )
 
     buf = create_category_pie(expenses, from_date, to_date)
@@ -80,7 +81,8 @@ async def expense_line_monthly(
 
     if not expenses:
         raise HTTPException(
-            status_code=404, detail="No expenses found for the specified period"
+            status_code=404,
+            detail="No expenses found for the specified period",
         )
 
     buf = create_monthly_line(expenses, from_date, to_date)
@@ -105,7 +107,8 @@ async def category_bar(
 
     if not expenses:
         raise HTTPException(
-            status_code=404, detail="No expenses found for the specified period"
+            status_code=404,
+            detail="No expenses found for the specified period",
         )
 
     buf = create_category_bar(expenses, from_date, to_date)
@@ -145,7 +148,8 @@ async def budget_vs_actual(
 
     if not expenses:
         raise HTTPException(
-            status_code=404, detail="No expenses found for the specified period"
+            status_code=404,
+            detail="No expenses found for the specified period",
         )
 
     buf = create_budget_vs_actual(

@@ -75,7 +75,9 @@ async def signup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return USERNAME
 
 
-async def handle_username(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def handle_username(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
     context.user_data["username"] = update.message.text
     await update.message.reply_text("Please enter your password:")
     return PASSWORD if context.user_data.get("is_signup") else LOGIN_PASSWORD
@@ -143,7 +145,9 @@ async def handle_signup_confirm(
 ) -> int:
     try:
         if update.message.text != context.user_data["password"]:
-            await update.message.reply_text("Passwords don't match. Please try again.")
+            await update.message.reply_text(
+                "Passwords don't match. Please try again."
+            )
             return ConversationHandler.END
 
         signup_data = {
@@ -185,7 +189,9 @@ async def handle_signup_confirm(
                     "Account created! Please use /login to access your account."
                 )
         else:
-            error_msg = response.json().get("detail", "Username may already exist.")
+            error_msg = response.json().get(
+                "detail", "Username may already exist."
+            )
             await update.message.reply_text(f"Signup failed: {error_msg}")
 
         return ConversationHandler.END
@@ -196,7 +202,9 @@ async def handle_signup_confirm(
         return ConversationHandler.END
 
 
-async def get_user(update: Optional[Update] = None, token: Optional[str] = None) -> Any:
+async def get_user(
+    update: Optional[Update] = None, token: Optional[str] = None
+) -> Any:
     """Get user data from the token."""
     if token:
         return await telegram_collection.find_one({"token": token})
@@ -214,8 +222,12 @@ def authenticate(func):
         user_id = update.effective_user.id
         user = await telegram_collection.find_one({"telegram_id": user_id})
         if user and user.get("token"):
-            return await func(update, context, token=user.get("token"), *args, **kwargs)
-        await update.message.reply_text("Please /login or /signup to continue.")
+            return await func(
+                update, context, token=user.get("token"), *args, **kwargs
+            )
+        await update.message.reply_text(
+            "Please /login or /signup to continue."
+        )
         return ConversationHandler.END
 
     return wrapper
@@ -240,10 +252,14 @@ auth_handlers = [
         entry_points=[CommandHandler("login", login)],
         states={
             USERNAME: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_username)
+                MessageHandler(
+                    filters.TEXT & ~filters.COMMAND, handle_username
+                )
             ],
             LOGIN_PASSWORD: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_login_password)
+                MessageHandler(
+                    filters.TEXT & ~filters.COMMAND, handle_login_password
+                )
             ],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
@@ -252,13 +268,19 @@ auth_handlers = [
         entry_points=[CommandHandler("signup", signup)],
         states={
             USERNAME: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_username)
+                MessageHandler(
+                    filters.TEXT & ~filters.COMMAND, handle_username
+                )
             ],
             PASSWORD: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_signup_password)
+                MessageHandler(
+                    filters.TEXT & ~filters.COMMAND, handle_signup_password
+                )
             ],
             SIGNUP_CONFIRM: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_signup_confirm)
+                MessageHandler(
+                    filters.TEXT & ~filters.COMMAND, handle_signup_confirm
+                )
             ],
         },
         fallbacks=[CommandHandler("cancel", cancel)],

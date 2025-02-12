@@ -28,10 +28,12 @@ async def async_client_auth():
     ) as client:
         # Create a user and log in to use for expenses tests
         await client.post(
-            "/users/", json={"username": "testuser", "password": "testpassword"}
+            "/users/",
+            json={"username": "testuser", "password": "testpassword"},
         )
         response = await client.post(
-            "/users/token/", data={"username": "testuser", "password": "testpassword"}
+            "/users/token/",
+            data={"username": "testuser", "password": "testpassword"},
         )
         token = response.json()["result"]["token"]
         client.headers.update({"token": token})
@@ -45,7 +47,11 @@ async def async_client_auth():
                 # Update the balance of the Checking account
                 await client.put(
                     f"/accounts/{account_id}",
-                    json={"balance": 1000.0, "currency": "USD", "name": "Checking"},
+                    json={
+                        "balance": 1000.0,
+                        "currency": "USD",
+                        "name": "Checking",
+                    },
                 )
 
         yield client

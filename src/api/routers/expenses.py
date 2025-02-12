@@ -136,7 +136,9 @@ async def add_expense(expense: ExpenseCreate, token: str = Header(None)):
     result = await expenses_collection.insert_one(expense_data)
 
     if result.inserted_id:
-        expense_data["date"] = expense_date  # Ensure consistent formatting for response
+        expense_data[
+            "date"
+        ] = expense_date  # Ensure consistent formatting for response
         return {
             "message": "Expense added successfully",
             "expense": format_id(expense_data),
@@ -157,7 +159,9 @@ async def get_expenses(token: str = Header(None)):
         dict: List of expenses.
     """
     user_id = await verify_token(token)
-    expenses = await expenses_collection.find({"user_id": user_id}).to_list(1000)
+    expenses = await expenses_collection.find({"user_id": user_id}).to_list(
+        1000
+    )
     formatted_expenses = [format_id(expense) for expense in expenses]
     return {"expenses": formatted_expenses}
 
@@ -197,9 +201,13 @@ async def delete_all_expenses(token: str = Header(None)):
     user_id = await verify_token(token)
 
     # Retrieve all expenses for the user before deletion
-    expenses = await expenses_collection.find({"user_id": user_id}).to_list(None)
+    expenses = await expenses_collection.find({"user_id": user_id}).to_list(
+        None
+    )
     if not expenses:
-        raise HTTPException(status_code=404, detail="No expenses found to delete")
+        raise HTTPException(
+            status_code=404, detail="No expenses found to delete"
+        )
 
     # Organize expenses by account name to sum them for each account
     account_adjustments: dict[str, float] = {}
@@ -267,10 +275,15 @@ async def delete_expense(expense_id: str, token: str = Header(None)):
     )
 
     # Delete the expense
-    result = await expenses_collection.delete_one({"_id": ObjectId(expense_id)})
+    result = await expenses_collection.delete_one(
+        {"_id": ObjectId(expense_id)}
+    )
 
     if result.deleted_count == 1:
-        return {"message": "Expense deleted successfully", "balance": new_balance}
+        return {
+            "message": "Expense deleted successfully",
+            "balance": new_balance,
+        }
     raise HTTPException(status_code=500, detail="Failed to delete expense")
 
 
@@ -335,7 +348,8 @@ async def update_expense(
 
             if new_balance < 0:
                 raise HTTPException(
-                    status_code=400, detail="Insufficient balance to update the expense"
+                    status_code=400,
+                    detail="Insufficient balance to update the expense",
                 )
             await accounts_collection.update_one(
                 {"_id": account["_id"]}, {"$set": {"balance": new_balance}}

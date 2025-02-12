@@ -33,7 +33,9 @@ class APIHelper:
 
             try:
                 async with session.post(
-                    f"{APIHelper.BASE_URL}/expenses/", json=payload, headers=headers
+                    f"{APIHelper.BASE_URL}/expenses/",
+                    json=payload,
+                    headers=headers,
                 ) as response:
                     if response.status == 200:
                         return {"success": True, "data": await response.json()}

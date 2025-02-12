@@ -61,7 +61,9 @@ async def amount(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         return AMOUNT
 
 
-async def description(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def description(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
     """Handle the description input from the user."""
     context.user_data["description"] = update.message.text
     await fetch_and_show_categories(update, context)
@@ -75,7 +77,9 @@ async def fetch_and_show_categories(
     """Fetch and display categories for the user to select."""
     headers = {"token": token}
     response = requests.get(
-        f"{TELEGRAM_BOT_API_BASE_URL}/categories/", headers=headers, timeout=TIMEOUT
+        f"{TELEGRAM_BOT_API_BASE_URL}/categories/",
+        headers=headers,
+        timeout=TIMEOUT,
     )
     if response.status_code == 200:
         categories = response.json().get("categories", [])
@@ -129,7 +133,9 @@ async def fetch_and_show_currencies(
     if response.status_code == 200:
         currencies = response.json().get("currencies", [])
         if not currencies:
-            await update.callback_query.message.edit_text("No currencies found.")
+            await update.callback_query.message.edit_text(
+                "No currencies found."
+            )
             return
 
         keyboard = [
@@ -141,7 +147,9 @@ async def fetch_and_show_currencies(
             "Please select a currency:", reply_markup=reply_markup
         )
     else:
-        await update.callback_query.message.edit_text("Failed to fetch currencies.")
+        await update.callback_query.message.edit_text(
+            "Failed to fetch currencies."
+        )
 
 
 async def currency(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -160,7 +168,9 @@ async def fetch_and_show_accounts(
     """Fetch and display accounts for the user to select."""
     headers = {"token": token}
     response = requests.get(
-        f"{TELEGRAM_BOT_API_BASE_URL}/accounts/", headers=headers, timeout=TIMEOUT
+        f"{TELEGRAM_BOT_API_BASE_URL}/accounts/",
+        headers=headers,
+        timeout=TIMEOUT,
     )
     if response.status_code == 200:
         accounts = response.json().get("accounts", [])
@@ -169,7 +179,11 @@ async def fetch_and_show_accounts(
             return
 
         keyboard = [
-            [InlineKeyboardButton(account["name"], callback_data=account["name"])]
+            [
+                InlineKeyboardButton(
+                    account["name"], callback_data=account["name"]
+                )
+            ]
             for account in accounts
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -177,7 +191,9 @@ async def fetch_and_show_accounts(
             "Please select an account:", reply_markup=reply_markup
         )
     else:
-        await update.callback_query.message.edit_text("Failed to fetch accounts.")
+        await update.callback_query.message.edit_text(
+            "Failed to fetch accounts."
+        )
 
 
 @authenticate
@@ -210,7 +226,9 @@ async def handle_date_option(
     await query.answer()
     if query.data == "date_now":
         tz = timezone(TIME_ZONE)
-        context.user_data["date"] = datetime.now(tz).strftime("%Y-%m-%dT%H:%M:%S.%f")
+        context.user_data["date"] = datetime.now(tz).strftime(
+            "%Y-%m-%dT%H:%M:%S.%f"
+        )
         # ...existing code to finalize expense addition...
         expense_data = {
             "amount": str(float(context.user_data["amount"])),
@@ -233,7 +251,9 @@ async def handle_date_option(
             )
         else:
             error_detail = response.json().get("detail", "Unknown error")
-            await query.message.edit_text(f"Failed to add expense: {error_detail}")
+            await query.message.edit_text(
+                f"Failed to add expense: {error_detail}"
+            )
         context.user_data.clear()
         return ConversationHandler.END
     elif query.data == "date_custom":
@@ -245,9 +265,13 @@ async def handle_date_option(
 
 
 @authenticate
-async def date(update: Update, context: ContextTypes.DEFAULT_TYPE, token: str) -> int:
+async def date(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, token: str
+) -> int:
     """Handle the date selection from the user and finalize the expense addition."""
-    result, key, step = DetailedTelegramCalendar().process(update.callback_query.data)
+    result, key, step = DetailedTelegramCalendar().process(
+        update.callback_query.data
+    )
     if not result and key:
         await update.callback_query.message.edit_text(
             f"Please select the date: {step}", reply_markup=key
@@ -297,7 +321,9 @@ async def expenses_view(
     """View the list of expenses with pagination."""
     headers = {"token": token}
     response = requests.get(
-        f"{TELEGRAM_BOT_API_BASE_URL}/expenses/", headers=headers, timeout=TIMEOUT
+        f"{TELEGRAM_BOT_API_BASE_URL}/expenses/",
+        headers=headers,
+        timeout=TIMEOUT,
     )
     if response.status_code == 200:
         expenses = response.json()["expenses"]
@@ -327,9 +353,9 @@ async def expenses_view(
                     expense["date"], "%Y-%m-%dT%H:%M:%S.%f"
                 ).strftime("%B %d, %Y")
             except ValueError:
-                date = datetime.strptime(expense["date"], "%Y-%m-%dT%H:%M:%S").strftime(
-                    "%B %d, %Y"
-                )
+                date = datetime.strptime(
+                    expense["date"], "%Y-%m-%dT%H:%M:%S"
+                ).strftime("%B %d, %Y")
             message += (
                 f"💵 *Amount:* {expense['amount']} {expense['currency']}\n"
                 f"📝 *Description:* {expense['description']}\n"
@@ -350,7 +376,9 @@ async def expenses_view(
         if update.message:
             await update.message.reply_text("Failed to fetch expenses.")
         elif update.callback_query:
-            await update.callback_query.message.edit_text("Failed to fetch expenses.")
+            await update.callback_query.message.edit_text(
+                "Failed to fetch expenses."
+            )
 
 
 @authenticate
@@ -371,7 +399,9 @@ async def expenses_delete(
     """Start the expense deletion process."""
     headers = {"token": token}
     response = requests.get(
-        f"{TELEGRAM_BOT_API_BASE_URL}/expenses/", headers=headers, timeout=TIMEOUT
+        f"{TELEGRAM_BOT_API_BASE_URL}/expenses/",
+        headers=headers,
+        timeout=TIMEOUT,
     )
     if response.status_code == 200:
         expenses = response.json()["expenses"]
@@ -395,11 +425,15 @@ async def expenses_delete(
         if total_pages > 1:
             if page > 1:
                 pagination_buttons.append(
-                    InlineKeyboardButton("⬅️", callback_data=f"delete_expenses#{page-1}")
+                    InlineKeyboardButton(
+                        "⬅️", callback_data=f"delete_expenses#{page-1}"
+                    )
                 )
             if page < total_pages:
                 pagination_buttons.append(
-                    InlineKeyboardButton("➡️", callback_data=f"delete_expenses#{page+1}")
+                    InlineKeyboardButton(
+                        "➡️", callback_data=f"delete_expenses#{page+1}"
+                    )
                 )
 
         start_idx = (page - 1) * items_per_page
@@ -408,12 +442,14 @@ async def expenses_delete(
 
         keyboard = []
         for expense in expenses_page:
-            button_text = (
-                f"{expense['description']} - {expense['amount']} {expense['currency']}"
-            )
+            button_text = f"{expense['description']} - {expense['amount']} {expense['currency']}"
             callback_data = f"delete_{expense['_id']}"
             keyboard.append(
-                [InlineKeyboardButton(button_text, callback_data=callback_data)]
+                [
+                    InlineKeyboardButton(
+                        button_text, callback_data=callback_data
+                    )
+                ]
             )
 
         # Add pagination row to keyboard if there are pagination buttons
@@ -470,8 +506,12 @@ async def confirm_delete(
             reply_markup=InlineKeyboardMarkup(
                 [
                     [
-                        InlineKeyboardButton("Yes", callback_data="confirm_delete"),
-                        InlineKeyboardButton("No", callback_data="cancel_delete"),
+                        InlineKeyboardButton(
+                            "Yes", callback_data="confirm_delete"
+                        ),
+                        InlineKeyboardButton(
+                            "No", callback_data="cancel_delete"
+                        ),
                     ]
                 ]
             ),
@@ -506,7 +546,9 @@ async def expenses_delete_all(
     """Start the process to delete all expenses."""
     headers = {"token": token}
     response = requests.get(
-        f"{TELEGRAM_BOT_API_BASE_URL}/expenses/", headers=headers, timeout=TIMEOUT
+        f"{TELEGRAM_BOT_API_BASE_URL}/expenses/",
+        headers=headers,
+        timeout=TIMEOUT,
     )
     if response.status_code == 200:
         expenses = response.json()["expenses"]
@@ -517,7 +559,9 @@ async def expenses_delete_all(
         total_expenses = len(expenses)
         keyboard = [
             [
-                InlineKeyboardButton("Yes", callback_data="confirm_delete_all"),
+                InlineKeyboardButton(
+                    "Yes", callback_data="confirm_delete_all"
+                ),
                 InlineKeyboardButton("No", callback_data="cancel_delete_all"),
             ]
         ]
@@ -548,7 +592,9 @@ async def confirm_delete_all(
             timeout=TIMEOUT,
         )
         if response.status_code == 200:
-            await query.message.edit_text("✅ All expenses deleted successfully!")
+            await query.message.edit_text(
+                "✅ All expenses deleted successfully!"
+            )
         else:
             await query.message.edit_text("❌ Failed to delete expenses.")
         return ConversationHandler.END
@@ -564,7 +610,9 @@ async def expenses_update(
     """Start the expense update process by showing list of expenses."""
     headers = {"token": token}
     response = requests.get(
-        f"{TELEGRAM_BOT_API_BASE_URL}/expenses/", headers=headers, timeout=TIMEOUT
+        f"{TELEGRAM_BOT_API_BASE_URL}/expenses/",
+        headers=headers,
+        timeout=TIMEOUT,
     )
 
     if response.status_code == 200:
@@ -585,11 +633,15 @@ async def expenses_update(
         if total_pages > 1:
             if page > 1:
                 pagination_buttons.append(
-                    InlineKeyboardButton("⬅️", callback_data=f"update_expenses#{page-1}")
+                    InlineKeyboardButton(
+                        "⬅️", callback_data=f"update_expenses#{page-1}"
+                    )
                 )
             if page < total_pages:
                 pagination_buttons.append(
-                    InlineKeyboardButton("➡️", callback_data=f"update_expenses#{page+1}")
+                    InlineKeyboardButton(
+                        "➡️", callback_data=f"update_expenses#{page+1}"
+                    )
                 )
 
         start_idx = (page - 1) * items_per_page
@@ -598,12 +650,14 @@ async def expenses_update(
 
         keyboard = []
         for expense in expenses_page:
-            button_text = (
-                f"{expense['description']} - {expense['amount']} {expense['currency']}"
-            )
+            button_text = f"{expense['description']} - {expense['amount']} {expense['currency']}"
             callback_data = f"update_{expense['_id']}"
             keyboard.append(
-                [InlineKeyboardButton(button_text, callback_data=callback_data)]
+                [
+                    InlineKeyboardButton(
+                        button_text, callback_data=callback_data
+                    )
+                ]
             )
 
         # Add pagination row if there are pagination buttons
@@ -654,7 +708,11 @@ async def select_update_field(
 
         keyboard = [
             [InlineKeyboardButton("Amount", callback_data="field_amount")],
-            [InlineKeyboardButton("Description", callback_data="field_description")],
+            [
+                InlineKeyboardButton(
+                    "Description", callback_data="field_description"
+                )
+            ],
             [InlineKeyboardButton("Category", callback_data="field_category")],
             [InlineKeyboardButton("Currency", callback_data="field_currency")],
             [InlineKeyboardButton("Account", callback_data="field_account")],
@@ -686,7 +744,9 @@ async def handle_field_selection(
         await fetch_and_show_accounts(update, context)
     elif field == "date":
         calendar, step = DetailedTelegramCalendar().build()
-        await query.edit_message_text(f"Select new date:", reply_markup=calendar)
+        await query.edit_message_text(
+            f"Select new date:", reply_markup=calendar
+        )
     else:
         await query.message.edit_text(f"Please enter new {field}:")
 
@@ -701,14 +761,18 @@ async def handle_update_value(
     field = context.user_data["update_field"]
     expense_id = context.user_data["expense_id"]
 
-    if update.callback_query:  # For category, currency, account, date selections
+    if (
+        update.callback_query
+    ):  # For category, currency, account, date selections
         query = update.callback_query
         await query.answer()
 
         if field == "date":
             result, key, step = DetailedTelegramCalendar().process(query.data)
             if not result and key:
-                await query.message.edit_text(f"Select date: {step}", reply_markup=key)
+                await query.message.edit_text(
+                    f"Select date: {step}", reply_markup=key
+                )
                 return UPDATE_VALUE
             new_value = result.strftime("%Y-%m-%dT%H:%M:%S.%f")
         else:
@@ -752,7 +816,9 @@ expenses_conv_handler = ConversationHandler(
     entry_points=[CommandHandler("expenses_add", expenses_add)],
     states={
         AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, amount)],
-        DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, description)],
+        DESCRIPTION: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, description)
+        ],
         CATEGORY: [CallbackQueryHandler(category)],
         CURRENCY: [CallbackQueryHandler(currency)],
         ACCOUNT: [CallbackQueryHandler(account)],
@@ -799,7 +865,9 @@ expenses_update_conv_handler = ConversationHandler(
             CallbackQueryHandler(handle_field_selection, pattern=r"^field_")
         ],
         UPDATE_VALUE: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_update_value),
+            MessageHandler(
+                filters.TEXT & ~filters.COMMAND, handle_update_value
+            ),
             CallbackQueryHandler(handle_update_value),
         ],
     },
@@ -814,5 +882,7 @@ expenses_handlers = [
     expenses_delete_conv_handler,
     expenses_delete_all_conv_handler,
     expenses_update_conv_handler,
-    CallbackQueryHandler(expenses_delete_page, pattern=r"^delete_expenses#\d+$"),
+    CallbackQueryHandler(
+        expenses_delete_page, pattern=r"^delete_expenses#\d+$"
+    ),
 ]

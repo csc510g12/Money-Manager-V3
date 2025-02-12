@@ -38,10 +38,14 @@ class TestConvertCurrency:
         amount = 100
         from_cur = "USD"
         to_cur = "EUR"
-        result = api.routers.expenses.convert_currency(amount, from_cur, to_cur)
+        result = api.routers.expenses.convert_currency(
+            amount, from_cur, to_cur
+        )
 
         mock_convert.assert_called_once_with(amount, from_cur, to_cur)
-        assert result == 85.0, "Conversion should match the mocked return value"
+        assert (
+            result == 85.0
+        ), "Conversion should match the mocked return value"
 
     # Test case for failed conversion (e.g., unsupported currency)
     @patch("api.routers.expenses.currency_converter.convert")
@@ -99,7 +103,11 @@ class TestExpenseAdd:
     async def test_invalid_category(self, async_client_auth: AsyncClient):
         response = await async_client_auth.post(
             "/expenses/",
-            json={"amount": 50.0, "currency": "USD", "category": "InvalidCategory"},
+            json={
+                "amount": 50.0,
+                "currency": "USD",
+                "category": "InvalidCategory",
+            },
         )
         assert response.status_code == 400
         assert response.json()["detail"].startswith(
@@ -135,7 +143,9 @@ class TestExpenseAdd:
         )
         assert response.status_code == 200, response.json()
         expense_date = response.json()["expense"]["date"]
-        assert isinstance(expense_date, str) and datetime.datetime.fromisoformat(
+        assert isinstance(
+            expense_date, str
+        ) and datetime.datetime.fromisoformat(
             expense_date
         ), "The date should be a valid ISO datetime"
 
@@ -298,7 +308,9 @@ class TestExpenseGet:
         # Generate a random non-existent ObjectId
         random_expense_id = str(ObjectId())
 
-        response = await async_client_auth.get(f"/expenses/{random_expense_id}")
+        response = await async_client_auth.get(
+            f"/expenses/{random_expense_id}"
+        )
         assert response.status_code == 404, response.json()
         assert response.json()["detail"] == "Expense not found"
 
@@ -349,7 +361,9 @@ class TestExpenseUpdate:
         expense_id = add_response.json()["expense"]["_id"]
 
         # Update the expense
-        response = await async_client_auth.put(f"/expenses/{expense_id}", json={})
+        response = await async_client_auth.put(
+            f"/expenses/{expense_id}", json={}
+        )
         assert response.status_code == 400
         assert response.json()["detail"] == "No fields to update"
 
@@ -416,7 +430,8 @@ class TestExpenseUpdate:
         assert add_response.status_code == 200, add_response.json()
         expense_id = add_response.json()["expense"]["_id"]
         await expenses_collection.update_one(
-            {"_id": ObjectId(expense_id)}, {"$set": {"account_name": "InvalidAccount"}}
+            {"_id": ObjectId(expense_id)},
+            {"$set": {"account_name": "InvalidAccount"}},
         )
         # Update the expense
         response = await async_client_auth.put(
@@ -446,7 +461,10 @@ class TestExpenseUpdate:
             json={"amount": 400000.0},
         )
         assert response.status_code == 400
-        assert response.json()["detail"] == "Insufficient balance to update the expense"
+        assert (
+            response.json()["detail"]
+            == "Insufficient balance to update the expense"
+        )
 
     async def test_not_found(self, async_client_auth: AsyncClient):
         response = await async_client_auth.put(
@@ -477,7 +495,9 @@ class TestExpenseUpdate:
         assert response.status_code == 200, response.json()
         assert response.json()["message"] == "Expense updated successfully"
         assert "updated_expense" in response.json()
-        assert response.json()["updated_expense"]["date"] == "2024-10-06T10:00:00"
+        assert (
+            response.json()["updated_expense"]["date"] == "2024-10-06T10:00:00"
+        )
 
     async def test_invalid_date(self, async_client_auth):
         # Create an expense first
@@ -516,7 +536,9 @@ class TestExpenseUpdate:
         expense_id = add_response.json()["expense"]["_id"]
 
         # Attempt to update the expense with no fields
-        response = await async_client_auth.put(f"/expenses/{expense_id}", json={})
+        response = await async_client_auth.put(
+            f"/expenses/{expense_id}", json={}
+        )
         assert response.status_code == 400
         assert response.json()["detail"] == "No fields to update"
 
@@ -537,7 +559,8 @@ class TestExpenseUpdate:
 
         # Manually set an invalid account name
         await expenses_collection.update_one(
-            {"_id": ObjectId(expense_id)}, {"$set": {"account_name": "InvalidAccount"}}
+            {"_id": ObjectId(expense_id)},
+            {"$set": {"account_name": "InvalidAccount"}},
         )
 
         # Attempt to update the expense
@@ -594,11 +617,15 @@ class TestExpenseDelete:
         assert response.json()["message"] == "Expense deleted successfully"
 
     async def test_specific_404(self, async_client_auth: AsyncClient):
-        response = await async_client_auth.delete("/expenses/507f1f77bcf86cd799439011")
+        response = await async_client_auth.delete(
+            "/expenses/507f1f77bcf86cd799439011"
+        )
         assert response.status_code == 404
         assert response.json()["detail"] == "Expense not found"
 
-    async def test_account_not_found_on_delete(self, async_client_auth: AsyncClient):
+    async def test_account_not_found_on_delete(
+        self, async_client_auth: AsyncClient
+    ):
         # First, add an expense
         add_response = await async_client_auth.post(
             "/expenses/",
@@ -615,7 +642,8 @@ class TestExpenseDelete:
 
         # Manually set an invalid account name
         await expenses_collection.update_one(
-            {"_id": ObjectId(expense_id)}, {"$set": {"account_name": "InvalidAccount"}}
+            {"_id": ObjectId(expense_id)},
+            {"$set": {"account_name": "InvalidAccount"}},
         )
 
         # Attempt to delete the expense
@@ -623,18 +651,22 @@ class TestExpenseDelete:
         assert response.status_code == 404
         assert response.json()["detail"] == "Account not found"
 
-    async def test_delete_expense_invalid_id(self, async_client_auth: AsyncClient):
-        invalid_expense_id = (
-            "507f1f77bcf86cd799439011"  # Valid ObjectId format but non-existent
+    async def test_delete_expense_invalid_id(
+        self, async_client_auth: AsyncClient
+    ):
+        invalid_expense_id = "507f1f77bcf86cd799439011"  # Valid ObjectId format but non-existent
+        response = await async_client_auth.delete(
+            f"/expenses/{invalid_expense_id}"
         )
-        response = await async_client_auth.delete(f"/expenses/{invalid_expense_id}")
         assert response.status_code == 404
         assert response.json()["detail"] == "Expense not found"
 
 
 @pytest.mark.anyio
 class TestExpenseDeleteAllWithMultipleScenarios:
-    async def test_single_expense_single_account(self, async_client_auth: AsyncClient):
+    async def test_single_expense_single_account(
+        self, async_client_auth: AsyncClient
+    ):
         # Create an account
         initial_balance = 500.0
         account_response = await async_client_auth.post(
@@ -663,19 +695,28 @@ class TestExpenseDeleteAllWithMultipleScenarios:
         # Delete all expenses
         delete_response = await async_client_auth.delete("/expenses/all")
         assert delete_response.status_code == 200, delete_response.json()
-        assert "expenses deleted successfully" in delete_response.json()["message"]
+        assert (
+            "expenses deleted successfully"
+            in delete_response.json()["message"]
+        )
 
         # Verify account balance adjustment
         response = await async_client_auth.get(f"/accounts/{account_id}")
         updated_balance = response.json()["account"]["balance"]
         assert updated_balance == initial_balance
 
-    async def test_many_expenses_single_account(self, async_client_auth: AsyncClient):
+    async def test_many_expenses_single_account(
+        self, async_client_auth: AsyncClient
+    ):
         # Create an account
         initial_balance = 1000.0
         account_response = await async_client_auth.post(
             "/accounts/",
-            json={"name": "Savings76", "balance": initial_balance, "currency": "USD"},
+            json={
+                "name": "Savings76",
+                "balance": initial_balance,
+                "currency": "USD",
+            },
         )
         assert account_response.status_code == 200, account_response.json()
         account_id = account_response.json()["account_id"]
@@ -751,7 +792,9 @@ class TestExpenseDeleteAllWithMultipleScenarios:
         assert delete_response.status_code == 200, delete_response.json()
 
         # Verify account balance adjustments
-        for account_id, balance, expense in zip(account_ids, balances, expenses_data):
+        for account_id, balance, expense in zip(
+            account_ids, balances, expenses_data
+        ):
             response = await async_client_auth.get(f"/accounts/{account_id}")
             updated_balance = response.json()["account"]["balance"]
             assert updated_balance == balance

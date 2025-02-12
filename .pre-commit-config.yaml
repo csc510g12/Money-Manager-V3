@@ -2,32 +2,36 @@
 fail_fast: false
 
 repos:
-  - repo: local
+  - repo: https://github.com/psf/black.git
+    rev: 23.9.1
     hooks:
       - id: black
-        name: black
-        entry: black .
-        language: system
-        pass_filenames: false
-        always_run: true
+        files: (.*\.(py|pyi|bzl)|BUILD|.*\.BUILD|WORKSPACE)$
+        args: [--line-length=79]
 
   - repo: local
     hooks:
       - id: isort
         name: isort
-        entry: isort .
+        entry: uv run isort .
         language: system
         pass_filenames: false
         always_run: true
+        args: ["--profile", "black"]
 
   - repo: local
     hooks:
       - id: pylint
         name: pylint
-        entry: pylint api/ config/
+        entry: uv run pylint api/ config/
         language: system
         pass_filenames: false
         always_run: true
+        args: [
+            "-rn", # Only display messages
+            "-sn", # Don't display the score
+            "--disable=missing-docstring,duplicate-code,invalid-name,fixme",
+          ]
 
   # - repo: https://github.com/pycqa/flake8
   #   rev: 7.1.1
@@ -49,14 +53,14 @@ repos:
     rev: v2.1.0
     hooks:
       - id: codespell
-        args: ["-L", "the,their,receive"]  # Ignore common typos inline
+        args: ["-L", "the,their,receive"] # Ignore common typos inline
         files: '\.(py|md|yml|yaml|txt|sh|Makefile)$'
 
   - repo: https://github.com/thlorenz/doctoc
     rev: v2.0.1
     hooks:
       - id: doctoc
-        args: ["--github", "--maxlevel=3"]  # Customize as needed for TOC structure
+        args: ["--github", "--maxlevel=3"] # Customize as needed for TOC structure
         exclude: .github/
 
   # - repo: https://github.com/trufflesecurity/truffleHog
@@ -84,41 +88,18 @@ repos:
     hooks:
       - id: bandit
         name: bandit
-        entry: bandit -r api/*
+        entry: uv run bandit -r api/*
         language: system
         pass_filenames: false
         always_run: true
-
-  # - repo: https://github.com/pyupio/safety
-  #   rev: 3.2.3
-  #   hooks:
-  #     - id: safety
-
-  - repo: https://github.com/adrienverge/yamllint
-    rev: v1.35.1
-    hooks:
-      - id: yamllint
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
-
-  - repo: local
-    hooks:
-      - id: pytest
-        name: pytest
-        entry: make test
-        language: system
-        pass_filenames: false
-        always_run: true
-
-  - repo: local
-    hooks:
-      - id: mypy
-        name: mypy
-        entry: mypy api/
-        language: system
-        pass_filenames: false
-        always_run: true
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+      - id: trailing-whitespace

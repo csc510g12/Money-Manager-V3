@@ -85,7 +85,9 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard = [
             [
-                InlineKeyboardButton("✅ Yes", callback_data="save_receipt_yes"),
+                InlineKeyboardButton(
+                    "✅ Yes", callback_data="save_receipt_yes"
+                ),
                 InlineKeyboardButton("❌ No", callback_data="save_receipt_no"),
             ]
         ]
@@ -99,14 +101,18 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"Error processing receipt: {str(e)}")
 
 
-async def handle_receipt_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_receipt_callback(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+):
     """Handle receipt callback queries"""
     query = update.callback_query
     await query.answer()
 
     receipt_data = context.user_data.get("last_receipt")
     if not receipt_data:
-        await query.edit_message_text("Receipt data not found. Please try again.")
+        await query.edit_message_text(
+            "Receipt data not found. Please try again."
+        )
         return
 
     if query.data == "save_receipt_yes":
@@ -123,7 +129,9 @@ async def handle_receipt_callback(update: Update, context: ContextTypes.DEFAULT_
                     f"Date: {receipt_data['date']}"
                 )
             else:
-                raise Exception(response.get("message", "Failed to save expense"))
+                raise Exception(
+                    response.get("message", "Failed to save expense")
+                )
         except Exception as e:
             logger.error(f"Error saving expense: {e}")
             await query.edit_message_text(f"Failed to save expense: {e}")

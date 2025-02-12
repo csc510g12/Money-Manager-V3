@@ -17,12 +17,13 @@ from openpyxl.worksheet.worksheet import Worksheet
 from pytz import timezone  # type: ignore
 from reportlab.lib import colors  # type: ignore
 from reportlab.lib.pagesizes import letter  # type: ignore
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet  # type: ignore
+from reportlab.lib.styles import ParagraphStyle  # type: ignore
+from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch  # type: ignore
-from reportlab.platypus import (  # type: ignore
+from reportlab.platypus import Paragraph  # type: ignore
+from reportlab.platypus import (
     Image,
     PageBreak,
-    Paragraph,
     SimpleDocTemplate,
     Spacer,
     Table,
@@ -59,7 +60,9 @@ class ExportType(str, Enum):
 
 # Utility function to fetch data
 async def fetch_user_data(
-    user_id: str, from_date: Optional[datetime.date], to_date: Optional[datetime.date]
+    user_id: str,
+    from_date: Optional[datetime.date],
+    to_date: Optional[datetime.date],
 ):
     """Fetch data from the database based on user ID and date range."""
     if from_date and to_date and from_date > to_date:
@@ -69,9 +72,15 @@ async def fetch_user_data(
         )
 
     from_dt = (
-        datetime.datetime.combine(from_date, datetime.time.min) if from_date else None
+        datetime.datetime.combine(from_date, datetime.time.min)
+        if from_date
+        else None
     )
-    to_dt = datetime.datetime.combine(to_date, datetime.time.max) if to_date else None
+    to_dt = (
+        datetime.datetime.combine(to_date, datetime.time.max)
+        if to_date
+        else None
+    )
 
     query = {"user_id": user_id}
     if from_dt and to_dt:
@@ -82,7 +91,9 @@ async def fetch_user_data(
         query["date"] = {"$lte": to_dt}  # type: ignore
 
     expenses = await expenses_collection.find(query).to_list(1000)
-    accounts = await accounts_collection.find({"user_id": user_id}).to_list(100)
+    accounts = await accounts_collection.find({"user_id": user_id}).to_list(
+        100
+    )
     user = await users_collection.find_one({"_id": ObjectId(user_id)})
 
     return expenses, accounts, user
@@ -91,12 +102,24 @@ async def fetch_user_data(
 def write_expenses_to_sheet(sheet: Worksheet, expenses: list):
     """Write expenses data to the given worksheet."""
     sheet.append(
-        ["date", "amount", "currency", "category", "description", "account_name", "_id"]
+        [
+            "date",
+            "amount",
+            "currency",
+            "category",
+            "description",
+            "account_name",
+            "_id",
+        ]
     )
     for expense in expenses:
         sheet.append(
             [
-                expense["date"].strftime("%Y-%m-%d") if expense.get("date") else "",
+                (
+                    expense["date"].strftime("%Y-%m-%d")
+                    if expense.get("date")
+                    else ""
+                ),
                 expense["amount"],
                 expense["currency"],
                 expense["category"],
@@ -144,7 +167,9 @@ async def data_to_xlsx(
         Response: XLSX file containing expenses, accounts, and categories data.
     """
     user_id = await verify_token(token)
-    expenses, accounts, user = await fetch_user_data(user_id, from_date, to_date)
+    expenses, accounts, user = await fetch_user_data(
+        user_id, from_date, to_date
+    )
 
     if not expenses and not accounts and not user:
         raise HTTPException(status_code=404, detail="No data found")
@@ -158,12 +183,16 @@ async def data_to_xlsx(
         write_expenses_to_sheet(expenses_sheet, expenses)
 
     # Write accounts
-    accounts_sheet: Optional[Worksheet] = workbook.create_sheet(title="Accounts")
+    accounts_sheet: Optional[Worksheet] = workbook.create_sheet(
+        title="Accounts"
+    )
     if accounts_sheet is not None:
         write_accounts_to_sheet(accounts_sheet, accounts)
 
     # Write categories
-    categories_sheet: Optional[Worksheet] = workbook.create_sheet(title="Categories")
+    categories_sheet: Optional[Worksheet] = workbook.create_sheet(
+        title="Categories"
+    )
     if categories_sheet is not None and user and user.get("categories"):
         write_categories_to_sheet(categories_sheet, user["categories"])
 
@@ -209,7 +238,9 @@ async def data_to_csv(
         Response: CSV file containing the selected data.
     """
     user_id = await verify_token(token)
-    expenses, accounts, user = await fetch_user_data(user_id, from_date, to_date)
+    expenses, accounts, user = await fetch_user_data(
+        user_id, from_date, to_date
+    )
     output = StringIO()
     writer = csv.writer(output)
 
@@ -230,7 +261,11 @@ async def data_to_csv(
         for expense in expenses:
             writer.writerow(
                 [
-                    expense["date"].strftime("%Y-%m-%d") if expense.get("date") else "",
+                    (
+                        expense["date"].strftime("%Y-%m-%d")
+                        if expense.get("date")
+                        else ""
+                    ),
                     expense["amount"],
                     expense["currency"],
                     expense["category"],
@@ -260,9 +295,9 @@ async def data_to_csv(
             writer.writerow([category_name, category_data["monthly_budget"]])
 
     response = Response(content=output.getvalue(), media_type="text/csv")
-    response.headers["Content-Disposition"] = (
-        f"attachment; filename={export_type.value}.csv"
-    )
+    response.headers[
+        "Content-Disposition"
+    ] = f"attachment; filename={export_type.value}.csv"
     return response
 
 
@@ -285,7 +320,9 @@ async def data_to_pdf(
     """
     # pylint: disable=too-many-locals, too-many-statements, too-many-branches
     user_id = await verify_token(token)
-    expenses, accounts, user = await fetch_user_data(user_id, from_date, to_date)
+    expenses, accounts, user = await fetch_user_data(
+        user_id, from_date, to_date
+    )
 
     if not expenses and not accounts and not user:
         raise HTTPException(status_code=404, detail="No data found")
@@ -333,14 +370,20 @@ async def data_to_pdf(
     elements.append(create_paragraph(app_description, centered_style))
     elements.append(Spacer(1, 18))
     elements.append(
-        create_paragraph(f"PDF Report for - {user['username']}", styles["Title"])
+        create_paragraph(
+            f"PDF Report for - {user['username']}", styles["Title"]
+        )
     )
     elements.append(Spacer(1, 36))
 
     # Table of Contents
     toc = [
-        create_paragraph("<link href='#expenses'>1. Expenses</link>", styles["Normal"]),
-        create_paragraph("<link href='#accounts'>2. Accounts</link>", styles["Normal"]),
+        create_paragraph(
+            "<link href='#expenses'>1. Expenses</link>", styles["Normal"]
+        ),
+        create_paragraph(
+            "<link href='#accounts'>2. Accounts</link>", styles["Normal"]
+        ),
         create_paragraph(
             "<link href='#categories'>3. Categories</link>", styles["Normal"]
         ),
@@ -348,7 +391,8 @@ async def data_to_pdf(
             "<link href='#analytics'>4. Analytics</link>", styles["Normal"]
         ),
         create_paragraph(
-            "   <link href='#expense-chart'>4.1. Expense Chart</link>", styles["Normal"]
+            "   <link href='#expense-chart'>4.1. Expense Chart</link>",
+            styles["Normal"],
         ),
         create_paragraph(
             "   <link href='#category-pie'>4.2. Category Distribution</link>",
@@ -383,7 +427,9 @@ async def data_to_pdf(
         return wrapped_data
 
     # Expenses
-    elements.append(create_paragraph("<a name='expenses'/>Expenses", styles["Title"]))
+    elements.append(
+        create_paragraph("<a name='expenses'/>Expenses", styles["Title"])
+    )
     elements.append(Spacer(1, 12))
     if from_date and to_date:
         if from_date == to_date:
@@ -399,12 +445,23 @@ async def data_to_pdf(
     elements.append(create_paragraph(date_range_text, styles["Normal"]))
     elements.append(Spacer(1, 12))
     expenses_data = [
-        ["Date", "Amount", "Currency", "Category", "Description", "Account Name"]
+        [
+            "Date",
+            "Amount",
+            "Currency",
+            "Category",
+            "Description",
+            "Account Name",
+        ]
     ]
     for expense in expenses:
         expenses_data.append(
             [
-                expense["date"].strftime("%Y-%m-%d") if expense.get("date") else "",
+                (
+                    expense["date"].strftime("%Y-%m-%d")
+                    if expense.get("date")
+                    else ""
+                ),
                 expense["amount"],
                 expense["currency"],
                 expense["category"],
@@ -431,11 +488,15 @@ async def data_to_pdf(
     elements.append(PageBreak())
 
     # Accounts
-    elements.append(create_paragraph("<a name='accounts'/>Accounts", styles["Title"]))
+    elements.append(
+        create_paragraph("<a name='accounts'/>Accounts", styles["Title"])
+    )
     elements.append(Spacer(1, 12))
     accounts_data = [["Name", "Balance", "Currency"]]
     for account in accounts:
-        accounts_data.append([account["name"], account["balance"], account["currency"]])
+        accounts_data.append(
+            [account["name"], account["balance"], account["currency"]]
+        )
     accounts_table = create_table(
         wrap_text(accounts_data),
         [100, 100, 100, 100],
@@ -462,7 +523,9 @@ async def data_to_pdf(
     categories_data = [["Name", "Monthly Budget"]]
     if user and "categories" in user:
         for category_name, category_data in user["categories"].items():
-            categories_data.append([category_name, category_data["monthly_budget"]])
+            categories_data.append(
+                [category_name, category_data["monthly_budget"]]
+            )
     categories_table = create_table(
         wrap_text(categories_data),
         [200, 200],
@@ -482,7 +545,9 @@ async def data_to_pdf(
 
     # Add analytics graphs
     elements.append(PageBreak())
-    elements.append(create_paragraph("<a name='analytics'/>Analytics", styles["Title"]))
+    elements.append(
+        create_paragraph("<a name='analytics'/>Analytics", styles["Title"])
+    )
     elements.append(Spacer(1, 12))
 
     # Replace graph fetching section with direct plot generation
@@ -524,6 +589,8 @@ async def data_to_pdf(
     doc.build(elements, onFirstPage=footer, onLaterPages=footer)
     buffer.seek(0)
 
-    response = Response(content=buffer.getvalue(), media_type="application/pdf")
+    response = Response(
+        content=buffer.getvalue(), media_type="application/pdf"
+    )
     response.headers["Content-Disposition"] = "attachment; filename=data.pdf"
     return response
