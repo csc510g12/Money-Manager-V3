@@ -201,17 +201,18 @@ async def create_token(
 ):
     """Create an access token for a user."""
     user = await users_collection.find_one({"username": form_data.username})
-    salt = str(user["password"])[-12:]
-    query_password = f"{hash(form_data.password+salt)}{salt}"
-    logger.debug(
-        f"Salt: {salt}, Password: {form_data.password}, Hashed+salt: {query_password}\n"
-        "real password: {user['password']}"
-    )  # disable debug in production
-
-    if not user or user["password"] != query_password:
+    try:
+        salt = str(user["password"])[-12:]
+        query_password = f"{hash(form_data.password+salt)}{salt}"
+        logger.debug(
+            f"Salt: {salt}, Password: {form_data.password}, Hashed+salt: {query_password}\n"
+            "real password: {user['password']}"
+        )  # disable debug in production
+        assert user and user["password"] == query_password
+    except Exception as e:
         raise HTTPException(
             status_code=401, detail="Incorrect username or password"
-        )
+        ) from e
 
     access_token_expires = datetime.timedelta(minutes=token_expires)
     access_token = create_access_token(
