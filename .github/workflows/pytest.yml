@@ -14,12 +14,19 @@ jobs:
       fail-fast: false
       max-parallel: 6
       matrix:
-        python-version: ["3.10"]
-        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.12"]
+        os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     defaults:
       run:
         shell: bash
+    env:
+      MONGO_URI: ${{ secrets.MONGO_URI }}
+      TOKEN_SECRET_KEY: ${{ secrets.TOKEN_SECRET_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      GMAIL_SMTP_USERNAME: ${{ secrets.GMAIL_SMTP_USERNAME }}
+      GMAIL_SMTP_PASSWORD: ${{ secrets.GMAIL_SMTP_PASSWORD }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
     steps:
       #----------------------------------------------
       #       Check out repository
@@ -47,6 +54,12 @@ jobs:
       - name: Install project dependencies
         run: uv sync --all-extras
 
+      # ----------------------------------------------
+      #      Install current package in editable mode
+      # ----------------------------------------------
+      - name: Install package in editable mode
+        run: uv pip install -e .
+
       #----------------------------------------------
       #    Rename config file before tests run
       #----------------------------------------------
@@ -57,7 +70,7 @@ jobs:
       #              Run test suite with pytest
       #----------------------------------------------
       - name: Run tests with pytest
-        run: uv run pytest --cov=./ --cov-report=xml
+        run: uv run pytest -s --cov=./ --cov-report=xml
 
       #----------------------------------------------
       #       Upload coverage to Codecov

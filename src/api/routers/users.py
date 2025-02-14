@@ -206,7 +206,7 @@ async def create_token(
         query_password = f"{hash(form_data.password+salt)}{salt}"
         logger.debug(
             f"Salt: {salt}, Password: {form_data.password}, Hashed+salt: {query_password}\n"
-            "real password: {user['password']}"
+            f"real password: {user['password']}"
         )  # disable debug in production
         assert user and user["password"] == query_password
     except Exception as e:
