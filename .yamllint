@@ -1,7 +1,0 @@
----
-extends: default
-
-rules:
-  line-length:
-    max: 120  # Set max line length to 120
-    level: warning  # Set to warning or ignore to lessen severity
