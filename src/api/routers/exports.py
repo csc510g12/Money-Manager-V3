@@ -356,7 +356,7 @@ async def data_to_pdf(
     elements.append(create_paragraph("MONEY MANAGER", title_style))
     elements.append(Spacer(1, 12))
     logo_path = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "../../docs/logo/logo.png")
+        os.path.join(os.path.dirname(__file__), "../../../docs/logo/logo.png")
     )
     logo = Image(logo_path)
     logo.drawHeight = 3.0 * inch * logo.drawHeight / logo.drawWidth
