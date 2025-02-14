@@ -7,9 +7,12 @@ import sys
 from telegram import Update
 from telegram.ext import (
     Application,
+    CallbackContext,
     CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
+    MessageHandler,
+    filters,
 )
 
 from bots.telegram.accounts import accounts_handlers
@@ -49,33 +52,57 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(get_menu_commands())
 
 
+async def group_chat_handler(update: Update, context: CallbackContext):
+    """Handles group chat messages where the bot is mentioned"""
+    chat = update.message.chat
+    user = update.message.from_user
+    text = update.message.text
+
+    if f"@{config.TELEGRAM_BOT_NAME}" in text:
+        await update.message.reply_text(
+            f"Hello {user.first_name}, you mentioned me in {chat.title}!"
+        )
+
+
+async def unknown(update: Update, context: CallbackContext):
+    """Handles unknown commands"""
+    await update.message.reply_text("I don't understand that command.")
+
+
 def main() -> None:
     """Initialize and start the bot."""
     token = config.TELEGRAM_BOT_TOKEN
     application = Application.builder().token(token).build()
 
-    # Register handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("menu", menu))
+    # Register private chat handlers
+    private_filter = filters.ChatType.PRIVATE
+    application.add_handler(CommandHandler("start", start, private_filter))
+    application.add_handler(CommandHandler("menu", menu, private_filter))
 
-    # Add auth handlers
+    # Add all your existing private chat handlers
     for handler in auth_handlers:
         application.add_handler(handler)
-
-    # Add expenses handlers
     for handler in expenses_handlers:
         application.add_handler(handler)
-
-    # Add categories handlers
     for handler in categories_handlers:
         application.add_handler(handler)
-    # Add categories handlers
     for handler in accounts_handlers:
         application.add_handler(handler)
     for handler in analytics_handlers:
         application.add_handler(handler)
 
-    application.add_handler(CommandHandler("unknown", unknown))
+    # Register group chat handler (bot mention only)
+    application.add_handler(
+        MessageHandler(
+            filters.ChatType.GROUPS
+            & filters.TEXT
+            & filters.Regex(f"@{config.TELEGRAM_BOT_NAME}"),
+            group_chat_handler,
+        )
+    )
+
+    # Catch unknown commands (only for private chat)
+    application.add_handler(CommandHandler("unknown", unknown, private_filter))
 
     # Start the bot
     application.run_polling(allowed_updates=Update.ALL_TYPES)
