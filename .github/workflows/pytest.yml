@@ -1,0 +1,82 @@
+name: Run pytest
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - closed
+
+jobs:
+  Test:
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        python-version: ["3.12"]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      MONGO_URI: ${{ secrets.MONGO_URI }}
+      TOKEN_SECRET_KEY: ${{ secrets.TOKEN_SECRET_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      GMAIL_SMTP_USERNAME: ${{ secrets.GMAIL_SMTP_USERNAME }}
+      GMAIL_SMTP_PASSWORD: ${{ secrets.GMAIL_SMTP_PASSWORD }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      #----------------------------------------------
+      #       Check out repository
+      #----------------------------------------------
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      #----------------------------------------------
+      #       Install uv using Astral’s setup-uv action
+      #----------------------------------------------
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      #----------------------------------------------
+      #       Set up Python using uv
+      #----------------------------------------------
+      - name: Set up Python
+        run: uv python install ${{ matrix.python-version }}
+
+      #----------------------------------------------
+      #       Install project dependencies with uv
+      #----------------------------------------------
+      - name: Install project dependencies
+        run: uv sync --all-extras
+
+      # ----------------------------------------------
+      #      Install current package in editable mode
+      # ----------------------------------------------
+      - name: Install package in editable mode
+        run: uv pip install -e .
+
+      #----------------------------------------------
+      #    Rename config file before tests run
+      #----------------------------------------------
+      - name: Rename config file
+        run: mv src/config/config_sample.py src/config/config.py
+
+      #----------------------------------------------
+      #              Run test suite with pytest
+      #----------------------------------------------
+      - name: Run tests with pytest
+        run: uv run pytest -s --cov=./ --cov-report=xml
+
+      #----------------------------------------------
+      #       Upload coverage to Codecov
+      #----------------------------------------------
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: csc510g12/project2

@@ -1,0 +1,68 @@
+name: Pre-commit Hooks
+
+on:
+  push:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - closed
+
+jobs:
+  pre-commit-uv:
+    name: Run Pre-commit Hooks with uv
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.10"]
+
+    steps:
+      #----------------------------------------------
+      #       Check out repository
+      #----------------------------------------------
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      #----------------------------------------------
+      #      Install uv using Astral’s setup-uv action
+      #----------------------------------------------
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      #----------------------------------------------
+      #        Set up Python using uv
+      #----------------------------------------------
+      - name: Set up Python
+        run: uv python install ${{ matrix.python-version }}
+
+      #----------------------------------------------
+      #       Install project dependencies with uv
+      #----------------------------------------------
+      - name: Install project dependencies
+        run: uv sync --all-extras
+
+      #----------------------------------------------
+      #   Install pre-commit (if not already part of your deps)
+      #----------------------------------------------
+      - name: Install pre-commit
+        run: uv run pip install pre-commit
+
+      #----------------------------------------------
+      #    Run pre-commit hooks and capture output
+      #----------------------------------------------
+      - name: Run pre-commit hooks and capture output
+        run: |
+          uv run pre-commit run --all-files --verbose | tee precommit_output.log || true
+
+      #----------------------------------------------
+      #       Upload pre-commit output
+      #----------------------------------------------
+      - name: Upload pre-commit output
+        uses: actions/upload-artifact@v4
+        with:
+          name: precommit-logs-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.os }}-${{ matrix.python-version }}
+          path: precommit_output.log
