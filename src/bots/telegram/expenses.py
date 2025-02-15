@@ -17,7 +17,7 @@ from telegram_bot_calendar import DetailedTelegramCalendar
 from telegram_bot_pagination import InlineKeyboardPaginator
 
 from bots.telegram.auth import authenticate
-from bots.telegram.utils import cancel
+from bots.telegram.utils import private_chat_cancel
 from config.config import MONGO_URI, TELEGRAM_BOT_API_BASE_URL, TIME_ZONE
 
 # Constants
@@ -825,7 +825,7 @@ expenses_conv_handler = ConversationHandler(
         DATE_OPTION: [CallbackQueryHandler(handle_date_option)],
         DATE: [CallbackQueryHandler(date)],
     },
-    fallbacks=[CommandHandler("cancel", cancel)],
+    fallbacks=[CommandHandler("cancel", private_chat_cancel)],
 )
 
 # Add the new handlers
@@ -839,7 +839,7 @@ expenses_delete_conv_handler = ConversationHandler(
             CallbackQueryHandler(confirm_delete),
         ],
     },
-    fallbacks=[CommandHandler("cancel", cancel)],
+    fallbacks=[CommandHandler("cancel", private_chat_cancel)],
 )
 
 # Add the delete all conversation handler
@@ -848,7 +848,7 @@ expenses_delete_all_conv_handler = ConversationHandler(
     states={
         DELETE_ALL_CONFIRM: [CallbackQueryHandler(confirm_delete_all)],
     },
-    fallbacks=[CommandHandler("cancel", cancel)],
+    fallbacks=[CommandHandler("cancel", private_chat_cancel)],
 )
 
 # Add this new conversation handler at the bottom with other handlers
@@ -871,7 +871,7 @@ expenses_update_conv_handler = ConversationHandler(
             CallbackQueryHandler(handle_update_value),
         ],
     },
-    fallbacks=[CommandHandler("cancel", cancel)],
+    fallbacks=[CommandHandler("cancel", private_chat_cancel)],
 )
 
 # Handlers for expenses

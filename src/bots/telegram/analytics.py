@@ -19,7 +19,7 @@ from telegram.ext import (
 )
 
 from bots.telegram.auth import authenticate
-from bots.telegram.utils import cancel
+from bots.telegram.utils import private_chat_cancel
 from config.config import (
     GMAIL_SMTP_PASSWORD,
     GMAIL_SMTP_PORT,
@@ -634,7 +634,7 @@ analytics_handlers.extend(
                     )
                 ],
             },
-            fallbacks=[CommandHandler("cancel", cancel)],
+            fallbacks=[CommandHandler("cancel", private_chat_cancel)],
         )
     ]
 )

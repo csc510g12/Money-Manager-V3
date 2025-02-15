@@ -17,7 +17,8 @@ from telegram.ext import (
 )
 
 from bots.telegram.auth import authenticate, get_user
-from bots.telegram.utils import cancel, extract_mentioned_usernames
+from bots.telegram.reply_handlers import ReplyWaiters
+from bots.telegram.utils import extract_mentioned_usernames
 
 
 class BillSplitTransaction:
@@ -48,7 +49,7 @@ async def bill_split_entry(
         update, context, keep_at_symbol=False
     )
     mentioned_users = [
-        user for user in mentioned_users if user != f"@{context.bot.username}"
+        user for user in mentioned_users if user != f"{context.bot.username}"
     ]
 
     if not mentioned_users:
@@ -72,6 +73,9 @@ async def bill_split_entry(
     )
 
     context.chat_data["amount_request_message_id"] = amount_message.message_id
+    ReplyWaiters[
+        (group_id, amount_message.message_id)
+    ] = bill_split_amount_handler
     return  # Wait for user response before proceeding
 
 

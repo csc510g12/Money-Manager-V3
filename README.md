@@ -4,9 +4,9 @@
 
 - [Money Manager](#money-manager)
   - [👥 Functionality](#-functionality)
-  - [👨‍💻 Developer Friendly](#%E2%80%8D-developer-friendly)
-  - [🛠️ Installation and Dev](#-installation-and-dev)
-  - [👨‍💻 Screenshots of Functionalities](#%E2%80%8D-screenshots-of-functionalities)
+  - [👨‍💻 Developer Friendly](#-developer-friendly)
+  - [🛠️ Installation and Dev](#️-installation-and-dev)
+  - [👨‍💻 Screenshots of Functionalities](#-screenshots-of-functionalities)
   - [🤝 Contributing](#-contributing)
   - [📜 Code of Conduct](#-code-of-conduct)
 

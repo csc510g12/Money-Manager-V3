@@ -13,7 +13,7 @@ from telegram.ext import (
 from telegram_bot_pagination import InlineKeyboardPaginator
 
 from bots.telegram.auth import authenticate
-from bots.telegram.utils import cancel
+from bots.telegram.utils import private_chat_cancel
 from config.config import TELEGRAM_BOT_API_BASE_URL
 
 # Constants
@@ -369,7 +369,7 @@ categories_conv_handler = ConversationHandler(
             )
         ],
     },
-    fallbacks=[CommandHandler("cancel", cancel)],
+    fallbacks=[CommandHandler("cancel", private_chat_cancel)],
 )
 
 # Add new conversation handler
@@ -378,7 +378,7 @@ categories_delete_conv_handler = ConversationHandler(
     states={
         CONFIRM_DELETE: [CallbackQueryHandler(confirm_delete_category)],
     },
-    fallbacks=[CommandHandler("cancel", cancel)],
+    fallbacks=[CommandHandler("cancel", private_chat_cancel)],
 )
 
 # Add new conversation handler for updates
@@ -392,7 +392,7 @@ categories_update_conv_handler = ConversationHandler(
             )
         ],
     },
-    fallbacks=[CommandHandler("cancel", cancel)],
+    fallbacks=[CommandHandler("cancel", private_chat_cancel)],
 )
 
 # Update the handlers list

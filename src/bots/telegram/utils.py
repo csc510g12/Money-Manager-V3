@@ -12,7 +12,9 @@ from config.config import (
 )
 
 
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def private_chat_cancel(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
     """Cancel current conversation and clear user data.
 
     Args:
@@ -110,3 +112,16 @@ async def extract_mentioned_usernames(
                 mentioned_users.append(username)
 
     return mentioned_users
+
+
+class Singleton(type):
+    """A metaclass for creating singleton classes."""
+
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(
+                *args, **kwargs
+            )
+        return cls._instances[cls]
