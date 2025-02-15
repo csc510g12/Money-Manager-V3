@@ -23,7 +23,7 @@ TELEGRAM_BOT_API_BASE_URL = os.getenv(
 
 TIME_ZONE = os.getenv("TIME_ZONE", "America/New_York")
 
-TELEGRAM_SET_COMMAND_TEXT = """
+TELEGRAM_PRIVATE_CHAT_COMMAND_TEXT = """
 start - Start the bot and display available commands
 menu - Display available commands
 signup - Register if you are a new user
@@ -45,6 +45,10 @@ categories_delete - Delete a category
 analytics - Display analytics
 exports - Export data to pdf, xlsx, csv
 cancel - To cancel any operation
+"""
+
+TELEGRAM_GROUP_CHAT_COMMAND_TEXT = """
+menu - Display available commands
 """
 
 GMAIL_SMTP_SERVER = os.getenv("GMAIL_SMTP_SERVER", "smtp.gmail.com")
