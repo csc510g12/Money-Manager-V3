@@ -103,10 +103,11 @@ async def bill_split_amount_handler(
         amount_text = update.message.text
         try:
             amount = float(amount_text)
-        except ValueError:
+        except ValueError as e:
             await update.message.reply_text(
                 "Invalid amount. Please enter a valid number."
             )
+            raise e  # raise to external handler
 
         ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].amount = amount
         await update.message.reply_text(
