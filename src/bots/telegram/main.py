@@ -28,6 +28,7 @@ from bots.telegram.group_bill_split import (
     confirm_bill_split,
 )
 from bots.telegram.receipts import receipts_handlers  # New import
+from bots.telegram.reply_handlers import reply_handler
 from bots.telegram.utils import (
     get_group_chat_menu_commands,
     get_private_chat_menu_commands,
@@ -82,9 +83,8 @@ async def group_chat_handler(
 
     # if its a reply message
     if update.message.reply_to_message:
-        await bill_split_amount_handler(
-            update, context
-        )  # todo : manage all reply handling with pool
+        # get chat id and message id of the replied message
+        await reply_handler(update=update, context=context)
 
     # Check if the bot is mentioned in the message
     if not context.bot.username in text:

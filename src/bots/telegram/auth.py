@@ -13,7 +13,10 @@ from telegram.ext import (
     filters,
 )
 
-from bots.telegram.utils import cancel, get_private_chat_menu_commands
+from bots.telegram.utils import (
+    get_private_chat_menu_commands,
+    private_chat_cancel,
+)
 from config import config
 
 # Constants
@@ -272,7 +275,7 @@ auth_handlers = [
                 )
             ],
         },
-        fallbacks=[CommandHandler("cancel", cancel)],
+        fallbacks=[CommandHandler("cancel", private_chat_cancel)],
     ),
     ConversationHandler(
         entry_points=[CommandHandler("signup", signup)],
@@ -293,7 +296,7 @@ auth_handlers = [
                 )
             ],
         },
-        fallbacks=[CommandHandler("cancel", cancel)],
+        fallbacks=[CommandHandler("cancel", private_chat_cancel)],
     ),
     CommandHandler("logout", logout),
 ]
