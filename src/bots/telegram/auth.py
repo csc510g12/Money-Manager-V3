@@ -13,7 +13,7 @@ from telegram.ext import (
     filters,
 )
 
-from bots.telegram.utils import cancel, get_menu_commands
+from bots.telegram.utils import cancel, get_private_chat_menu_commands
 from config import config
 
 # Constants
@@ -120,7 +120,7 @@ async def handle_login_password(
                 await telegram_collection.insert_one(user_data)
 
             await update.message.reply_text(
-                f"Login successful!\n\n{get_menu_commands()}"
+                f"Login successful!\n\n{get_private_chat_menu_commands()}"
             )
         else:
             await update.message.reply_text(
@@ -182,7 +182,7 @@ async def handle_signup_confirm(
                 await telegram_collection.insert_one(user_data)
 
                 await update.message.reply_text(
-                    f"Signup successful! You are now logged in.\n\n{get_menu_commands()}"
+                    f"Signup successful! You are now logged in.\n\n{get_private_chat_menu_commands()}"
                 )
             else:
                 await update.message.reply_text(
@@ -210,6 +210,7 @@ async def get_user(
         return await telegram_collection.find_one({"token": token})
     if update:
         user_id = update.effective_user.id
+        print(f"User ID: {user_id}")
         return await telegram_collection.find_one({"telegram_id": user_id})
 
 

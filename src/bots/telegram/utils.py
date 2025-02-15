@@ -1,11 +1,15 @@
 """Utility functions for the Telegram bot."""
 
 import re
+from typing import List
 
-from telegram import Update
+from telegram import MessageEntity, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
-from config.config import TELEGRAM_SET_COMMAND_TEXT
+from config.config import (
+    TELEGRAM_GROUP_CHAT_COMMAND_TEXT,
+    TELEGRAM_PRIVATE_CHAT_COMMAND_TEXT,
+)
 
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -28,8 +32,16 @@ async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text("Sorry, I didn't understand that command.")
 
 
-def get_menu_commands() -> str:
-    commands = TELEGRAM_SET_COMMAND_TEXT.strip().split("\n")
+def get_private_chat_menu_commands() -> str:
+    return parse_menu_commands(TELEGRAM_PRIVATE_CHAT_COMMAND_TEXT)
+
+
+def get_group_chat_menu_commands() -> str:
+    return parse_menu_commands(TELEGRAM_GROUP_CHAT_COMMAND_TEXT)
+
+
+def parse_menu_commands(text: str) -> str:
+    commands = text.strip().split("\n")
     grouped_commands = {
         "Helper Commands": {
             "pattern": re.compile(r"^(start|menu|cancel)$"),
@@ -73,3 +85,24 @@ def get_menu_commands() -> str:
                 )
 
     return f"Here are the available commands:\n\n{pretty_commands.strip()}"
+
+
+async def extract_mentioned_usernames(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> List[str]:
+    """Handles group messages where the bot is mentioned and extracts @mentions."""
+    message = update.message
+    mentioned_users = []
+
+    # Extracting entities from message
+    if message.entities:
+        for entity in message.entities:
+            if (
+                entity.type == MessageEntity.MENTION
+            ):  # Checks for @username mentions
+                username = message.text[
+                    entity.offset : entity.offset + entity.length
+                ]
+                mentioned_users.append(username)
+
+    return mentioned_users
