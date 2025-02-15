@@ -90,10 +90,6 @@ async def group_chat_handler(
     if not context.bot.username in text:
         return
 
-    print(
-        f"User: {user.username} mentioned the bot in group chat: {chat.title}, message: {text}"
-    )  # todo : remove this line after testing
-
     # if is menu command
     if "/menu" in text:
         await update.message.reply_text(get_group_chat_menu_commands())

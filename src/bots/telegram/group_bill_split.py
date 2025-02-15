@@ -17,14 +17,28 @@ from telegram.ext import (
 )
 
 from bots.telegram.auth import authenticate, get_user
+from bots.telegram.expenses import (
+    fetch_and_show_categories,
+    fetch_and_show_currencies,
+)
 from bots.telegram.reply_handlers import ReplyWaiters
 from bots.telegram.utils import extract_mentioned_usernames
 
 
 class BillSplitTransaction:
-    def __init__(self, mmuser_names: List[str], amount: float = None):
+    def __init__(
+        self,
+        mmuser_names: List[str],
+        issuer=None,
+        amount: float = None,
+        category=None,
+        currency=None,
+    ):
+        self.issuer = issuer  # the user who initiated the bill split
         self.confirmed_states = {name: False for name in mmuser_names}
         self.amount = amount
+        self.category = category
+        self.currency = currency
 
 
 ONGOING_BILL_SPLIT_TRANSACTIONS = {
@@ -58,9 +72,13 @@ async def bill_split_entry(
         )
         return
 
+    # issuer of the bill split
+    issuer = await get_user(tg_user_id=update.effective_user.id)
+
     # Create a new bill split transaction
     ONGOING_BILL_SPLIT_TRANSACTIONS[group_id] = BillSplitTransaction(
-        mentioned_users
+        mmuser_names=mentioned_users,
+        issuer=issuer,
     )
 
     await update.message.reply_text(
@@ -85,15 +103,23 @@ async def bill_split_amount_handler(
     """Handle user input for bill amount if it is a reply to the request."""
     group_id = update.message.chat_id
 
-    logger.debug(
-        f"Group ID: {group_id} - Message ID: {update.message.message_id}"
-    )
-
     if group_id not in ONGOING_BILL_SPLIT_TRANSACTIONS:
         await update.message.reply_text(
             "No active bill split transaction in this group."
         )
         return
+
+    # check if the replier is the same user who initiated the bill split
+    if (
+        update.message.from_user.id
+        != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer["telegram_id"]
+    ):
+        await update.message.reply_text(
+            "You are not the issuer of this bill split."
+        )
+        raise ValueError(
+            "The user who replied to the message is not the issuer of the bill split."
+        )
 
     if (
         update.message.reply_to_message
@@ -110,8 +136,24 @@ async def bill_split_amount_handler(
             raise e  # raise to external handler
 
         ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].amount = amount
+
+        # handling categories and concurrencies
+        # await fetch_and_show_categories(update, context)
+        # query = update.callback_query
+        # await query.answer()
+        # category = query.data
+        # await fetch_and_show_currencies(update, context)
+        # query = update.callback_query
+        # await query.answer()
+        # currency = query.data
+        # ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].category = category
+        # ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].currency = currency
+
+        # Confirm the amount and proceed with the bill split
         await update.message.reply_text(
-            f"The bill amount is set to {amount:.2f}. Now waiting for confirmations."
+            f"The amount to be split is: {amount}"
+            # + " {currency}. Category: {category}.\n"
+            "Please confirm the bill split by clicking the button below."
         )
         mentioned_users = list(
             ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].confirmed_states.keys()
