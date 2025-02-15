@@ -22,7 +22,11 @@ from bots.telegram.analytics import analytics_handlers
 from bots.telegram.auth import auth_handlers, get_user  # Update import
 from bots.telegram.categories import categories_handlers
 from bots.telegram.expenses import expenses_handlers
-from bots.telegram.group_bill_split import bill_split_entry, confirm_bill_split
+from bots.telegram.group_bill_split import (
+    bill_split_amount_handler,
+    bill_split_entry,
+    confirm_bill_split,
+)
 from bots.telegram.receipts import receipts_handlers  # New import
 from bots.telegram.utils import (
     get_group_chat_menu_commands,
@@ -75,6 +79,12 @@ async def group_chat_handler(
     chat = update.message.chat
     user = update.message.from_user
     text = update.message.text
+
+    # if its a reply message
+    if update.message.reply_to_message:
+        await bill_split_amount_handler(
+            update, context
+        )  # todo : manage all reply handling with pool
 
     # Check if the bot is mentioned in the message
     if not context.bot.username in text:

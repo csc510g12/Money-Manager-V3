@@ -88,7 +88,9 @@ def parse_menu_commands(text: str) -> str:
 
 
 async def extract_mentioned_usernames(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    keep_at_symbol: bool = True,
 ) -> List[str]:
     """Handles group messages where the bot is mentioned and extracts @mentions."""
     message = update.message
@@ -103,6 +105,8 @@ async def extract_mentioned_usernames(
                 username = message.text[
                     entity.offset : entity.offset + entity.length
                 ]
+                if not keep_at_symbol:
+                    username = username[1:]
                 mentioned_users.append(username)
 
     return mentioned_users
