@@ -203,11 +203,15 @@ async def handle_signup_confirm(
 
 
 async def get_user(
-    update: Optional[Update] = None, token: Optional[str] = None
+    update: Optional[Update] = None,
+    token: Optional[str] = None,
+    tg_user_id=None,
 ) -> Any:
     """Get user data from the token."""
     if token:
         return await telegram_collection.find_one({"token": token})
+    if tg_user_id:
+        return await telegram_collection.find_one({"telegram_id": tg_user_id})
     if update:
         user_id = update.effective_user.id
         print(f"User ID: {user_id}")
@@ -226,9 +230,14 @@ def authenticate(func):
             return await func(
                 update, context, token=user.get("token"), *args, **kwargs
             )
-        await update.message.reply_text(
-            "Please /login or /signup to continue."
-        )
+        if update.effective_chat.type != "private":
+            await update.message.reply_text(
+                "Please sign in to your private chat with the bot to continue."
+            )
+        else:
+            await update.message.reply_text(
+                "Please /login or /signup to continue."
+            )
         return ConversationHandler.END
 
     return wrapper

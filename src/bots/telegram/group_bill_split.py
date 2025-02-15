@@ -43,7 +43,8 @@ async def bill_split_entry(
         keyboard = [
             [
                 InlineKeyboardButton(
-                    f"Confirm - {user}", callback_data=f"confirm_{user}"
+                    f"Confirm - {user}",
+                    callback_data=f"confirm_bill_split_{user}",
                 )
             ]
             for user in mentioned_users
@@ -67,6 +68,15 @@ async def confirm_bill_split(
     mentioned_username = query.data.split("_", 1)[
         1
     ]  # Extract mentioned username
+
+    mmuser = await get_user(tg_user_id=user.id)
+    if not mmuser:
+        await query.answer(
+            "You need to be authenticated to confirm. Please send `/login` or `/signup` in private chat with the bot."
+        )
+        return
+
+    print(mmuser)
 
     # todo : Store the confirmation in a context
     if "confirmed_users" not in context.chat_data:

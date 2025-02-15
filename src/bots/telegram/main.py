@@ -82,7 +82,7 @@ async def group_chat_handler(
 
     print(
         f"User: {user.username} mentioned the bot in group chat: {chat.title}, message: {text}"
-    )
+    )  # todo : remove this line after testing
 
     # if is menu command
     if "/menu" in text:
@@ -115,7 +115,9 @@ def main() -> None:
         MessageHandler(filters.ChatType.GROUP, group_chat_handler)
     )
     application.add_handler(
-        CallbackQueryHandler(confirm_bill_split, pattern="^confirm_")
+        CallbackQueryHandler(
+            confirm_bill_split, pattern="^confirm_bill_split_"
+        )
     )
 
     # Register private chat handlers
