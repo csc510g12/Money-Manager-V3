@@ -1,3 +1,4 @@
+from functools import cache
 from typing import Callable, Tuple
 
 from loguru import logger
@@ -87,8 +88,12 @@ async def reply_handler(
     )  # todo : remove this line after testing
 
     if (chat_id, message_id) in ReplyWaiters.keys():
-        await ReplyWaiters[(chat_id, message_id)](update, context)
-        del ReplyWaiters[(chat_id, message_id)]
+        try:
+            await ReplyWaiters[(chat_id, message_id)](update, context)
+            del ReplyWaiters[(chat_id, message_id)]
+        except Exception as e:
+            logger.error(f"Error in reply handler: {e}")
+
     # else:
     #     await update.message.reply_text("This message is not waiting for a reply.")
     return ConversationHandler.END
