@@ -49,6 +49,7 @@ cancel - To cancel any operation
 
 TELEGRAM_GROUP_CHAT_COMMAND_TEXT = """
 menu - Display available commands
+bill_split - Split a bill with group members
 """
 
 GMAIL_SMTP_SERVER = os.getenv("GMAIL_SMTP_SERVER", "smtp.gmail.com")
