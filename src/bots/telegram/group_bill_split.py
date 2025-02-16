@@ -303,3 +303,30 @@ async def confirm_bill_split_callback_handler(
             )
 
         del ONGOING_BILL_SPLIT_TRANSACTIONS[group_id]
+
+
+async def cancel_bill_split_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """Cancel the bill split process."""
+    group_id = update.message.chat_id
+
+    if group_id in ONGOING_BILL_SPLIT_TRANSACTIONS:
+        # check if the issuer of cancel command is the same user who initiated the bill split
+        if (
+            update.message.from_user.id
+            != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer["telegram_id"]
+        ):
+            await update.message.reply_text(
+                "You are not the issuer of this bill split."
+            )
+            return
+
+        del ONGOING_BILL_SPLIT_TRANSACTIONS[group_id]
+        await update.message.reply_text(
+            "Bill split process has been canceled."
+        )
+    else:
+        await update.message.reply_text(
+            "No active bill split transaction to cancel."
+        )
