@@ -25,6 +25,7 @@ from bots.telegram.expenses import expenses_handlers
 from bots.telegram.group_bill_split import (
     bill_split_amount_handler,
     bill_split_entry,
+    cancel_bill_split_handler,
     confirm_bill_split_callback_handler,
 )
 from bots.telegram.receipts import receipts_handlers  # New import
@@ -97,6 +98,10 @@ async def group_chat_handler(
     # if is bill split command
     elif "/bill_split" in text:
         await bill_split_entry(update, context)
+        return
+    # if is cancel command
+    elif "/cancel" in text:
+        await cancel_bill_split_handler(update, context)
         return
     # if is unknown command
     else:
