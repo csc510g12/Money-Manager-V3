@@ -3,6 +3,7 @@ from typing import Dict, List, Union
 
 import requests
 from loguru import logger
+from matplotlib.pyplot import show
 from pytz import timezone
 from telegram import (
     InlineKeyboardButton,
@@ -27,6 +28,8 @@ from bots.telegram.expenses import (
 from bots.telegram.reply_handlers import ReplyWaiters
 from bots.telegram.utils import extract_mentioned_usernames
 from config.config import TELEGRAM_BOT_API_BASE_URL, TIME_ZONE
+
+TIMEOUT = 10  # seconds
 
 
 class BillSplitTransaction:
@@ -164,45 +167,107 @@ async def bill_split_amount_handler(
 
         ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].amount = amount
 
-        await show_confirm_bill_split(update, context)
+        await show_select_currency(
+            update, context
+        )  # Show available currencies to the user
 
 
-#         # await fetch_and_show_currencies(update, context)
-#         # query = update.callback_query
-#         # await query.answer()
-#         # currency = query.data
-#         # ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].currency = currency
+@authenticate
+async def show_select_currency(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, token: str
+) -> None:
+    # check if the user is the issuer of the bill split
+    group_id = update.message.chat_id
+    if group_id not in ONGOING_BILL_SPLIT_TRANSACTIONS:
+        await update.message.reply_text(
+            "No active bill split transaction in this group."
+        )
+        return
+    if (
+        update.message.from_user.id
+        != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer["telegram_id"]
+    ):
+        await update.message.reply_text(
+            "You are not the issuer of this bill split."
+        )
+        return
+
+    headers = {"token": token}
+    response = requests.get(
+        f"{TELEGRAM_BOT_API_BASE_URL}/users/", headers=headers, timeout=TIMEOUT
+    )
+    if response.status_code == 200:
+        currencies = response.json().get("currencies", [])
+        if not currencies:
+            await update.callback_query.message.edit_text(
+                "No currencies found."
+            )
+            return
+
+    # Show available currencies to the user
+    await update.message.reply_text(
+        "Please select the currency for the bill split from the list below:"
+    )
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                currency, callback_data=f"currency_bill_split_{currency}"
+            )
+        ]
+        for currency in currencies
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        "Select a currency:", reply_markup=reply_markup
+    )
 
 
-# async def show_bill_split_currencies(
-#     update: Update, context: ContextTypes.DEFAULT_TYPE
-# ) -> None:
-#     pass
+async def bill_split_currency_selection_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """Handle currency selection for bill split."""
+    query = update.callback_query
+    group_id = query.message.chat_id
 
+    if group_id not in ONGOING_BILL_SPLIT_TRANSACTIONS:
+        await query.answer("No active bill split transaction in this group.")
+        return
 
-# async def currencies_callback_handler(
-#     update: Update, context: ContextTypes.DEFAULT_TYPE
-# ) -> None:
-#     pass
+    # check if the user is the issuer of the bill split
+    if (
+        query.from_user.id
+        != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer["telegram_id"]
+    ):
+        await query.answer("You are not the issuer of this bill split.")
+        return
+
+    selected_currency = query.data.removeprefix("currency_bill_split_")
+    ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].currency = selected_currency
+
+    await show_confirm_bill_split(
+        update, context
+    )  # Show confirmation message with the selected currency
 
 
 async def show_confirm_bill_split(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
+    chat_id = update.callback_query.message.chat_id
+
     # Confirm the amount and proceed with the bill split
-    await update.message.reply_text(
-        f"The amount to be split is: {ONGOING_BILL_SPLIT_TRANSACTIONS[update.message.chat_id].amount}"
-        + f" {ONGOING_BILL_SPLIT_TRANSACTIONS[update.message.chat_id].currency}."
-        + f"Category: {ONGOING_BILL_SPLIT_TRANSACTIONS[update.message.chat_id].category}."
+    # Instead of replying to the message, send a new message
+
+    await update.callback_query.message.reply_text(
+        f"The amount to be split is: {ONGOING_BILL_SPLIT_TRANSACTIONS[chat_id].amount}"
+        + f" {ONGOING_BILL_SPLIT_TRANSACTIONS[chat_id].currency}."
+        # + f"Category: {ONGOING_BILL_SPLIT_TRANSACTIONS[chat_id].category}."
         + "Please confirm the bill split by clicking the button below."
     )
     mentioned_users = list(
-        ONGOING_BILL_SPLIT_TRANSACTIONS[
-            update.message.chat_id
-        ].confirmed_states.keys()
+        ONGOING_BILL_SPLIT_TRANSACTIONS[chat_id].confirmed_states.keys()
     )
     if not mentioned_users:
-        await update.message.reply_text(
+        await update.callback_query.message.reply_text(
             "No users mentioned for the bill split."
         )
         return
@@ -216,7 +281,7 @@ async def show_confirm_bill_split(
         for user in mentioned_users
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(
+    await update.callback_query.message.reply_text(
         "Each mentioned user, please confirm your participation by clicking the button below:",
         reply_markup=reply_markup,
     )

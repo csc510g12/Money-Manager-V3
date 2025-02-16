@@ -3,6 +3,7 @@
 import logging
 import os
 import sys
+from ast import Call
 
 from proto import Message
 from telegram import Update
@@ -24,6 +25,7 @@ from bots.telegram.categories import categories_handlers
 from bots.telegram.expenses import expenses_handlers
 from bots.telegram.group_bill_split import (
     bill_split_amount_handler,
+    bill_split_currency_selection_handler,
     bill_split_entry,
     cancel_bill_split_handler,
     confirm_bill_split_callback_handler,
@@ -128,6 +130,12 @@ def main() -> None:
     application.add_handler(
         CallbackQueryHandler(
             confirm_bill_split_callback_handler, pattern="^confirm_bill_split_"
+        )
+    )
+    application.add_handler(
+        CallbackQueryHandler(
+            bill_split_currency_selection_handler,
+            pattern="^currency_bill_split_",
         )
     )
 
