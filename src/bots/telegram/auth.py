@@ -217,7 +217,6 @@ async def get_user(
         return await telegram_collection.find_one({"telegram_id": tg_user_id})
     if update:
         user_id = update.effective_user.id
-        print(f"User ID: {user_id}")
         return await telegram_collection.find_one({"telegram_id": user_id})
 
 

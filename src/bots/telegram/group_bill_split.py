@@ -1,6 +1,9 @@
-from typing import Dict, List
+from datetime import datetime
+from typing import Dict, List, Union
 
+import requests
 from loguru import logger
+from pytz import timezone
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -17,19 +20,57 @@ from telegram.ext import (
 )
 
 from bots.telegram.auth import authenticate, get_user
+from bots.telegram.expenses import (
+    fetch_and_show_categories,
+    fetch_and_show_currencies,
+)
 from bots.telegram.reply_handlers import ReplyWaiters
 from bots.telegram.utils import extract_mentioned_usernames
+from config.config import TELEGRAM_BOT_API_BASE_URL, TIME_ZONE
 
 
 class BillSplitTransaction:
-    def __init__(self, mmuser_names: List[str], amount: float = None):
-        self.confirmed_states = {name: False for name in mmuser_names}
+    def __init__(
+        self,
+        participants: Union[List[str], List[Dict]],
+        issuer=None,
+        amount: float = None,
+        category="Bill Split",
+        currency="USD",
+        timestamp=datetime.now(timezone(TIME_ZONE)).strftime(
+            "%Y-%m-%dT%H:%M:%S.%f"
+        ),
+        description="Bill Split",
+    ):
+        self.issuer = issuer  # the user who initiated the bill split
+        self.participants = participants
+        self.confirmed_states = (
+            {name: False for name in participants.keys()}
+            if isinstance(participants, dict)
+            else {name: False for name in participants}
+        )
         self.amount = amount
+        self.category = category
+        self.currency = currency
+        self.timestamp = timestamp
+        self.description = description
+
+    @property
+    def json(self):
+        return {
+            "amount": self.amount,
+            "description": self.description,
+            "category": self.category,
+            "currency": self.currency,
+            "date": self.timestamp,
+        }
 
 
-ONGOING_BILL_SPLIT_TRANSACTIONS = {
-    int: BillSplitTransaction
-}  # Dictionary to track ongoing transactions, group_id: BillSplitTransaction
+ONGOING_BILL_SPLIT_TRANSACTIONS: Dict[
+    int, BillSplitTransaction
+] = (
+    {}
+)  # Dictionary to track ongoing transactions, group_id: BillSplitTransaction
 
 
 @authenticate
@@ -58,9 +99,13 @@ async def bill_split_entry(
         )
         return
 
+    # issuer of the bill split
+    issuer = await get_user(tg_user_id=update.effective_user.id)
+
     # Create a new bill split transaction
     ONGOING_BILL_SPLIT_TRANSACTIONS[group_id] = BillSplitTransaction(
-        mentioned_users
+        participants={tg_username: {} for tg_username in mentioned_users},
+        issuer=issuer,
     )
 
     await update.message.reply_text(
@@ -85,15 +130,23 @@ async def bill_split_amount_handler(
     """Handle user input for bill amount if it is a reply to the request."""
     group_id = update.message.chat_id
 
-    logger.debug(
-        f"Group ID: {group_id} - Message ID: {update.message.message_id}"
-    )
-
     if group_id not in ONGOING_BILL_SPLIT_TRANSACTIONS:
         await update.message.reply_text(
             "No active bill split transaction in this group."
         )
         return
+
+    # check if the replier is the same user who initiated the bill split
+    if (
+        update.message.from_user.id
+        != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer["telegram_id"]
+    ):
+        await update.message.reply_text(
+            "You are not the issuer of this bill split."
+        )
+        raise ValueError(
+            "The user who replied to the message is not the issuer of the bill split."
+        )
 
     if (
         update.message.reply_to_message
@@ -103,40 +156,73 @@ async def bill_split_amount_handler(
         amount_text = update.message.text
         try:
             amount = float(amount_text)
-        except ValueError:
+        except ValueError as e:
             await update.message.reply_text(
                 "Invalid amount. Please enter a valid number."
             )
+            raise e  # raise to external handler
 
         ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].amount = amount
+
+        await show_confirm_bill_split(update, context)
+
+
+#         # await fetch_and_show_currencies(update, context)
+#         # query = update.callback_query
+#         # await query.answer()
+#         # currency = query.data
+#         # ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].currency = currency
+
+
+# async def show_bill_split_currencies(
+#     update: Update, context: ContextTypes.DEFAULT_TYPE
+# ) -> None:
+#     pass
+
+
+# async def currencies_callback_handler(
+#     update: Update, context: ContextTypes.DEFAULT_TYPE
+# ) -> None:
+#     pass
+
+
+async def show_confirm_bill_split(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    # Confirm the amount and proceed with the bill split
+    await update.message.reply_text(
+        f"The amount to be split is: {ONGOING_BILL_SPLIT_TRANSACTIONS[update.message.chat_id].amount}"
+        + f" {ONGOING_BILL_SPLIT_TRANSACTIONS[update.message.chat_id].currency}."
+        + f"Category: {ONGOING_BILL_SPLIT_TRANSACTIONS[update.message.chat_id].category}."
+        + "Please confirm the bill split by clicking the button below."
+    )
+    mentioned_users = list(
+        ONGOING_BILL_SPLIT_TRANSACTIONS[
+            update.message.chat_id
+        ].confirmed_states.keys()
+    )
+    if not mentioned_users:
         await update.message.reply_text(
-            f"The bill amount is set to {amount:.2f}. Now waiting for confirmations."
+            "No users mentioned for the bill split."
         )
-        mentioned_users = list(
-            ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].confirmed_states.keys()
-        )
-        if not mentioned_users:
-            await update.message.reply_text(
-                "No users mentioned for the bill split."
+        return
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                f"Confirm - {user}",
+                callback_data=f"confirm_bill_split_{user}",
             )
-            return
-        keyboard = [
-            [
-                InlineKeyboardButton(
-                    f"Confirm - {user}",
-                    callback_data=f"confirm_bill_split_{user}",
-                )
-            ]
-            for user in mentioned_users
         ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text(
-            "Each mentioned user, please confirm your participation by clicking the button below:",
-            reply_markup=reply_markup,
-        )
+        for user in mentioned_users
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        "Each mentioned user, please confirm your participation by clicking the button below:",
+        reply_markup=reply_markup,
+    )
 
 
-async def confirm_bill_split(
+async def confirm_bill_split_callback_handler(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
     """Handle confirmation button clicks."""
@@ -154,7 +240,8 @@ async def confirm_bill_split(
     transaction = ONGOING_BILL_SPLIT_TRANSACTIONS[group_id]
 
     # logger.debug(
-    #     f"User: {user.username} tried to confirm bill split for {mentioned_username}, the states are {transaction.confirmed_states}"
+    #     f"User: {user.username} tried to confirm bill split for {mentioned_username}, "+
+    #     f"the states are {transaction.confirmed_states}"
     # )
 
     if user.username != mentioned_username:
@@ -171,6 +258,8 @@ async def confirm_bill_split(
             "You need to be authenticated to confirm. Please send `/login` or `/signup` in private chat with the bot."
         )
         return
+    else:
+        transaction.participants[mentioned_username] = mmuser
 
     transaction.confirmed_states[mentioned_username] = True
 
@@ -200,5 +289,17 @@ async def confirm_bill_split(
         await query.message.reply_text(
             "All users have confirmed. Proceeding with bill split."
         )
+        transaction.timestamp = datetime.now(timezone(TIME_ZONE)).strftime(
+            "%Y-%m-%dT%H:%M:%S.%f"
+        )
+        group_name = query.message.chat.title
+        transaction.description = f"Bill Split in group {group_name} issued by {transaction.issuer['username']}"
+
         # todo : proceed with all user's personal account
+
+        for tg_username, mmuser in transaction.participants.items():
+            logger.debug(
+                f"User {mmuser} has confirmed participation, proceeding with bill split."
+            )
+
         del ONGOING_BILL_SPLIT_TRANSACTIONS[group_id]
