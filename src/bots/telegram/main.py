@@ -25,7 +25,7 @@ from bots.telegram.expenses import expenses_handlers
 from bots.telegram.group_bill_split import (
     bill_split_amount_handler,
     bill_split_entry,
-    confirm_bill_split,
+    confirm_bill_split_callback_handler,
 )
 from bots.telegram.receipts import receipts_handlers  # New import
 from bots.telegram.reply_handlers import reply_handler
@@ -101,7 +101,7 @@ async def group_chat_handler(
     # if is unknown command
     else:
         await update.message.reply_text(
-            f"Hello {user.first_name}, I saw you mentioned me in {chat.title}! If you need help, type /menu."
+            f"Hello {user.first_name}, I saw you mentioned me in {chat.title}! If you need help, please mention me with command /menu for available commands."
         )
         return
 
@@ -122,7 +122,7 @@ def main() -> None:
     )
     application.add_handler(
         CallbackQueryHandler(
-            confirm_bill_split, pattern="^confirm_bill_split_"
+            confirm_bill_split_callback_handler, pattern="^confirm_bill_split_"
         )
     )
 
