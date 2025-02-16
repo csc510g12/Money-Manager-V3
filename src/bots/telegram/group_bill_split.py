@@ -21,10 +21,6 @@ from telegram.ext import (
 )
 
 from bots.telegram.auth import authenticate, get_user
-from bots.telegram.expenses import (
-    fetch_and_show_categories,
-    fetch_and_show_currencies,
-)
 from bots.telegram.reply_handlers import ReplyWaiters
 from bots.telegram.utils import extract_mentioned_usernames
 from config.config import TELEGRAM_BOT_API_BASE_URL, TIME_ZONE
@@ -44,6 +40,7 @@ class BillSplitTransaction:
             "%Y-%m-%dT%H:%M:%S.%f"
         ),
         description="Bill Split",
+        anchor_update=None,
     ):
         self.issuer = issuer  # the user who initiated the bill split
         self.participants = participants
@@ -57,6 +54,9 @@ class BillSplitTransaction:
         self.currency = currency
         self.timestamp = timestamp
         self.description = description
+        self.anchor_update: Update = (
+            anchor_update  # Placeholder for the update object
+        )
 
     @property
     def json(self):
@@ -109,6 +109,7 @@ async def bill_split_entry(
     ONGOING_BILL_SPLIT_TRANSACTIONS[group_id] = BillSplitTransaction(
         participants={tg_username: {} for tg_username in mentioned_users},
         issuer=issuer,
+        anchor_update=update,
     )
 
     await update.message.reply_text(
@@ -205,9 +206,6 @@ async def show_select_currency(
             return
 
     # Show available currencies to the user
-    await update.message.reply_text(
-        "Please select the currency for the bill split from the list below:"
-    )
     keyboard = [
         [
             InlineKeyboardButton(
@@ -218,7 +216,8 @@ async def show_select_currency(
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        "Select a currency:", reply_markup=reply_markup
+        "Please select the currency for the bill split from the list below:",
+        reply_markup=reply_markup,
     )
 
 
@@ -244,9 +243,88 @@ async def bill_split_currency_selection_handler(
     selected_currency = query.data.removeprefix("currency_bill_split_")
     ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].currency = selected_currency
 
-    await show_confirm_bill_split(
+    await show_select_category(
         update, context
-    )  # Show confirmation message with the selected currency
+    )  # Show available categories to the user
+
+
+@authenticate
+async def show_select_category(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, token: str
+) -> None:
+    """Show the selected category for the bill split."""
+    query = update.callback_query
+    group_id = query.message.chat_id
+
+    if group_id not in ONGOING_BILL_SPLIT_TRANSACTIONS:
+        await query.answer("No active bill split transaction in this group.")
+        return
+
+    # check if the user is the issuer of the bill split
+    if (
+        query.from_user.id
+        != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer["telegram_id"]
+    ):
+        await query.answer("You are not the issuer of this bill split.")
+        return
+
+    headers = {"token": token}
+    response = requests.get(
+        f"{TELEGRAM_BOT_API_BASE_URL}/categories/",
+        headers=headers,
+        timeout=TIMEOUT,
+    )
+    if response.status_code == 200:
+        categories = response.json().get("categories", [])
+        if not categories:
+            message = "No categories found."
+            if update.message:
+                await query.answer(message)
+            elif update.callback_query:
+                await update.callback_query.message.edit_text(message)
+            return
+
+    # Show available categories to the user
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                category, callback_data=f"category_bill_split_{category}"
+            )
+        ]
+        for category in categories
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await ONGOING_BILL_SPLIT_TRANSACTIONS[
+        group_id
+    ].anchor_update.message.reply_text(
+        "Please select the category for the bill split from the list below:",
+        reply_markup=reply_markup,
+    )
+
+
+async def bill_split_category_selection_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """Handle category selection for bill split."""
+    query = update.callback_query
+    group_id = query.message.chat_id
+
+    if group_id not in ONGOING_BILL_SPLIT_TRANSACTIONS:
+        await query.answer("No active bill split transaction in this group.")
+        return
+
+    # check if the user is the issuer of the bill split
+    if (
+        query.from_user.id
+        != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer["telegram_id"]
+    ):
+        await query.answer("You are not the issuer of this bill split.")
+        return
+
+    selected_category = query.data.removeprefix("category_bill_split_")
+    ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].category = selected_category
+
+    await show_confirm_bill_split(update, context)
 
 
 async def show_confirm_bill_split(
