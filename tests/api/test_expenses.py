@@ -3,6 +3,7 @@ import datetime
 from unittest.mock import patch
 
 import pytest
+from datetime import datetime
 from bson import ObjectId
 from fastapi import HTTPException
 from httpx import AsyncClient
@@ -145,7 +146,7 @@ class TestExpenseAdd:
         expense_date = response.json()["expense"]["date"]
         assert isinstance(
             expense_date, str
-        ) and datetime.datetime.fromisoformat(
+        ) and datetime.fromisoformat(
             expense_date
         ), "The date should be a valid ISO datetime"
 
@@ -167,7 +168,7 @@ class TestExpenseAdd:
         )
         assert response.status_code == 200, response.json()
         expense_date = response.json()["expense"]["date"]
-        assert datetime.datetime.fromisoformat(
+        assert datetime.fromisoformat(
             expense_date
         ), "The date should be a valid ISO datetime"
         assert (
@@ -895,3 +896,69 @@ async def test_currency_conversion(async_client_auth: AsyncClient):
     response = await async_client_auth.delete(f"/expenses/{expense_id}")
     assert response.status_code == 200
     assert response.json()["balance"] == balance
+
+@pytest.mark.anyio
+class TestDateBoundaryValues:
+    async def test_leap_day_valid(self, async_client_auth: AsyncClient):
+        """
+        Test an expense using February 29 on a leap year (2024).
+        """
+        payload = {
+            "amount": 100.0,
+            "currency": "USD",
+            "category": "Food",
+            "description": "Leap day expense",
+            "account_name": "Checking",
+            "date": "2024-02-29T12:00:00"
+        }
+        response = await async_client_auth.post("/expenses/", json=payload)
+        assert response.status_code == 200, response.json()
+
+    async def test_leap_day_invalid(self, async_client_auth: AsyncClient):
+        """
+        Test an expense using February 29 on a non-leap year (2023).
+        """
+        payload = {
+            "amount": 100.0,
+            "currency": "USD",
+            "category": "Food",
+            "description": "Invalid leap day expense",
+            "account_name": "Checking",
+            "date": "2023-02-29T12:00:00"
+        }
+        response = await async_client_auth.post("/expenses/", json=payload)
+        # Expect a validation error due to invalid date.
+        assert response.status_code == 422, response.json()
+
+@pytest.mark.anyio
+class TestCurrencyBoundaryValues:
+    async def test_valid_currency(self, async_client_auth: AsyncClient):
+        """
+        Test using a valid currency code.
+        """
+        payload = {
+            "amount": 100.0,
+            "currency": "USD",
+            "category": "Food",
+            "description": "Valid currency test",
+            "account_name": "Checking",
+            "date": datetime.now().isoformat()
+        }
+        response = await async_client_auth.post("/expenses/", json=payload)
+        assert response.status_code == 200, response.json()
+
+    async def test_invalid_currency(self, async_client_auth: AsyncClient):
+        """
+        Test using an invalid currency code (e.g., 'USDX').
+        """
+        payload = {
+            "amount": 100.0,
+            "currency": "USDX",  # Invalid currency code
+            "category": "Food",
+            "description": "Invalid currency test",
+            "account_name": "Checking",
+            "date": datetime.now().isoformat()
+        }
+        response = await async_client_auth.post("/expenses/", json=payload)
+        assert response.status_code == 400, response.json()
+        assert "Currency type is not added" in response.json()["detail"]
