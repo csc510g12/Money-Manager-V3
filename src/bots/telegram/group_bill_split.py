@@ -1,4 +1,5 @@
 from datetime import datetime
+from tabnanny import check
 from typing import Dict, List, Union
 
 import requests
@@ -31,9 +32,9 @@ TIMEOUT = 10  # seconds
 class BillSplitTransaction:
     def __init__(
         self,
-        participants: Union[List[str], List[Dict]],
+        participants: Dict[str, Union[Dict, None]],
         issuer=None,
-        amount: float = None,
+        amount: float = 0.0,
         category="Bill Split",
         currency="USD",
         timestamp=datetime.now(timezone(TIME_ZONE)).strftime(
@@ -336,8 +337,9 @@ async def show_confirm_bill_split(
     # Instead of replying to the message, send a new message
 
     await update.callback_query.message.reply_text(
-        f"The amount to be split is: {ONGOING_BILL_SPLIT_TRANSACTIONS[chat_id].amount}"
-        + f" {ONGOING_BILL_SPLIT_TRANSACTIONS[chat_id].currency}."
+        f"The amount to be split is: {ONGOING_BILL_SPLIT_TRANSACTIONS[chat_id].amount} "
+        + f"{ONGOING_BILL_SPLIT_TRANSACTIONS[chat_id].currency}. "
+        + f"Each participant will pay {ONGOING_BILL_SPLIT_TRANSACTIONS[chat_id].amount / len(ONGOING_BILL_SPLIT_TRANSACTIONS[chat_id].participants)} "
         # + f"Category: {ONGOING_BILL_SPLIT_TRANSACTIONS[chat_id].category}."
         + "Please confirm the bill split by clicking the button below."
     )
@@ -432,20 +434,67 @@ async def confirm_bill_split_callback_handler(
         await query.message.reply_text(
             "All users have confirmed. Proceeding with bill split."
         )
-        transaction.timestamp = datetime.now(timezone(TIME_ZONE)).strftime(
-            "%Y-%m-%dT%H:%M:%S.%f"
-        )
-        group_name = query.message.chat.title
-        transaction.description = f"Bill Split in group {group_name} issued by {transaction.issuer['username']}"
 
-        # todo : proceed with all user's personal account
+        await bill_split_proceed_handler(
+            update, context, check_status=False, group_id=group_id
+        )  # Proceed with the bill split process
 
-        for tg_username, mmuser in transaction.participants.items():
-            logger.debug(
-                f"User {mmuser} has confirmed participation, proceeding with bill split."
+
+@authenticate
+async def bill_split_proceed_handler(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    check_status: bool = True,
+    group_id=None,
+    token: str = None,
+) -> None:
+    """Handle the bill split process."""
+    group_id = group_id or update.message.chat_id
+    transaction = ONGOING_BILL_SPLIT_TRANSACTIONS[group_id]
+    update = update if check_status else transaction.anchor_update
+
+    if check_status:
+        if group_id not in ONGOING_BILL_SPLIT_TRANSACTIONS:
+            await update.message.reply_text(
+                "No active bill split transaction in this group."
             )
+            return
 
-        del ONGOING_BILL_SPLIT_TRANSACTIONS[group_id]
+        # check if the user is the issuer of the bill split
+        if (
+            update.message.from_user.id
+            != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer["telegram_id"]
+        ):
+            await update.message.reply_text(
+                "You are not the issuer of this bill split."
+            )
+            return
+
+    transaction.timestamp = datetime.now(timezone(TIME_ZONE)).strftime(
+        "%Y-%m-%dT%H:%M:%S.%f"
+    )
+    group_name = update.message.chat.title
+    transaction.description = f"Bill Split in group {group_name} issued by {transaction.issuer['username']}"
+
+    try:
+        await process_bill_split(group_id, transaction)
+        assert (
+            group_id not in ONGOING_BILL_SPLIT_TRANSACTIONS
+        ), "Transaction not deleted after processing"
+        await update.message.reply_text(
+            f"Bill split transaction has been successfully processed.\n"
+            f"💵 Amount: {transaction.amount} {transaction.currency}\n"
+            f"📌 Category: {transaction.category}\n"
+            f"📝 Description: {transaction.description}\n"
+            f"Participants: {'@'+', @'.join(transaction.participants.keys())}\n"
+        )
+    except Exception as e:
+        logger.error(f"Error while processing bill split: {e}")
+        await update.message.reply_text(
+            f"An error occurred while processing the bill split : {e}\n"
+            + f"If you want to try again, please mention me with command \\/bill_split_proceed"
+        )
+        return
 
 
 async def cancel_bill_split_handler(
@@ -473,3 +522,175 @@ async def cancel_bill_split_handler(
         await update.message.reply_text(
             "No active bill split transaction to cancel."
         )
+
+
+async def process_bill_split(
+    group_id: int, transaction: BillSplitTransaction
+) -> None:
+    """Process the bill split transaction.
+
+    1. Check the confirmation states, and check through all the participants if they are authenticated
+    2. Check accounts for each participant, make sure in any of their account, there is target currency, and with enough balance
+    3. Check accounts for each participant, during which
+        3.1 If category is not found, create it
+        3.2 If
+    4. If any of previous steps failed, return error message
+    5. If all steps passed, proceed with the transaction
+
+    Args:
+        group_id (int): The group ID where the transaction is taking place.
+        transaction (BillSplitTransaction): The bill split transaction to process.
+    """
+
+    # Check if all participants have confirmed
+    try:
+        # todo : check all the conditions
+        # Check the confirmation states
+        assert all(
+            transaction.confirmed_states.values()
+        ), f"Not all participants have confirmed"
+        # Check if all participants are authenticated
+        participants_not_confirmed = [
+            tg_username
+            for tg_username, participant in transaction.participants.items()
+            if not participant
+        ]
+        if participants_not_confirmed:
+            raise ValueError(
+                f"@{', @'.join(participants_not_confirmed)} have not confirmed this transaction."
+            )
+
+        # Check if all participants have accounts with the target currency
+        tgusername2account: Dict[
+            str, List[Dict]
+        ] = {}  # mm username: List[Dict], any account with target currency
+        for tg_username, participant in transaction.participants.items():
+            headers = {"token": participant["token"]}
+            response = requests.get(
+                f"{TELEGRAM_BOT_API_BASE_URL}/accounts/",
+                headers=headers,
+                timeout=TIMEOUT,
+            )
+            if response.status_code == 200:
+                accounts_list = response.json().get("accounts", [])
+                if not accounts_list:
+                    raise ValueError(
+                        # f"Participant {participant} has no accounts."
+                        "Some participants have no accounts."  # for privacy reasons, do not show the participant
+                    )
+                # Check if any account has the target currency
+                if not any(
+                    account["currency"] == transaction.currency
+                    for account in accounts_list
+                ):
+                    raise ValueError(
+                        f"Participant {participant} has no account with currency {transaction.currency}."
+                    )
+            else:
+                raise ValueError(
+                    # f"Failed to fetch accounts for participant {participant}."
+                    "Failed to fetch accounts for some participants."  # for privacy reasons, do not show the participant
+                )
+            # Store the accounts with the target currency
+            tgusername2account[tg_username] = [
+                account
+                for account in accounts_list
+                if account["currency"] == transaction.currency
+            ]
+
+        # Check if all participants have enough balance in corresponding accounts
+        for tg_username, accounts in tgusername2account.items():
+            if all(
+                account["balance"] < transaction.amount for account in accounts
+            ):
+                logger.error(
+                    f"Participant tg user @{tg_username} does not have enough {transaction.currency} balance in their accounts."
+                )
+                raise ValueError(
+                    # f"Participant {tg_username} does not have enough balance in their accounts."
+                    f"Some participants do not have enough {transaction.currency} balance in their accounts."  # for privacy reasons, do not show the participant
+                )
+            else:
+                # only store the first account with enough balance
+                tgusername2account[tg_username] = [
+                    account
+                    for account in accounts
+                    if account["balance"] >= transaction.amount
+                ][0]
+                logger.debug(
+                    f"Using account {tgusername2account[tg_username]['name']} for participant tg user @{tg_username}."
+                )
+
+        # Check if all participants have the target category
+        category_creation_flag = False
+        for tg_username, participant in transaction.participants.items():
+            headers = {"token": participant["token"]}
+            response = requests.get(
+                f"{TELEGRAM_BOT_API_BASE_URL}/categories/",
+                headers=headers,
+                timeout=TIMEOUT,
+            )
+            if response.status_code == 200:
+                category_list = response.json().get("categories", {})
+                if (
+                    not category_list
+                    or transaction.category not in category_list
+                ):  # Create the category if it doesn't exist
+                    logger.debug(
+                        f"Creating category {transaction.category} for tg user {tg_username}."
+                    )
+                    category_creation_flag = True
+                    response = requests.post(
+                        f"{TELEGRAM_BOT_API_BASE_URL}/categories/",
+                        headers=headers,
+                        json={
+                            "name": transaction.category,
+                            "monthly_budget": 0,
+                        },
+                        timeout=TIMEOUT,
+                    )
+                    if response.status_code != 200:
+                        logger.error(
+                            f"Failed to create category {transaction.category} for participant {tg_username}."
+                        )
+                        raise ValueError(
+                            # f"Failed to create category {transaction.category} for participant {tg_username}."
+                            "Failed to create category for some participants."  # for privacy reasons, do not show the participant
+                        )
+        if category_creation_flag:
+            transaction.anchor_update.message.reply_text(
+                f"Some participants did not have the category {transaction.category}, so it has been created for them. You can manage your categories in the private chat with me."
+            )
+
+        # Proceed with the transaction
+        for tg_username, participant in transaction.participants.items():
+            headers = {"token": participant["token"]}
+            response = requests.post(
+                f"{TELEGRAM_BOT_API_BASE_URL}/expenses/",
+                headers=headers,
+                json={
+                    "amount": transaction.amount
+                    / len(transaction.participants),
+                    "description": transaction.description,
+                    "category": transaction.category,
+                    "currency": transaction.currency,
+                    "date": transaction.timestamp,
+                    "account": tgusername2account[tg_username]["name"],
+                },
+                timeout=TIMEOUT,
+            )
+            if response.status_code != 200:
+                error_detail = response.json().get("detail", "Unknown error")
+                logger.error(
+                    f"Failed to create transaction for participant {tg_username}: {error_detail}"
+                )
+                raise ValueError(
+                    # f"Failed to create transaction for participant {tg_username}."
+                    "Failed to create transaction for some participants."  # for privacy reasons, do not show the participant
+                )  # todo should have rollback mechanism
+
+        # finally, delete the transaction
+        del ONGOING_BILL_SPLIT_TRANSACTIONS[group_id]
+
+    except Exception as e:
+        raise e
