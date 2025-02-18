@@ -1,10 +1,12 @@
+import threading
 from collections import namedtuple
 from datetime import datetime
 from typing import Dict, List, NamedTuple, Union
+from uuid import uuid4
 
 import requests
 from loguru import logger
-from pytz import timezone
+from pytz import timezone as pytz_timezone
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -22,6 +24,12 @@ TRANSACTION_TIMEOUT = 600  # seconds
 
 ComplexUser = namedtuple("ComplexUser", ["tg_username", "mm_user"])
 
+ONGOING_BILL_SPLIT_TRANSACTIONS: Dict[
+    int, "BillSplitTransaction"
+] = (
+    {}
+)  # Dictionary to track ongoing transactions, group_id: BillSplitTransaction
+
 
 class BillSplitTransaction:
     def __init__(
@@ -31,7 +39,7 @@ class BillSplitTransaction:
         amount: float = 0.0,
         category="Bill Split",
         currency="USD",
-        timestamp=datetime.now(timezone(TIME_ZONE)).strftime(
+        timestamp=datetime.now(pytz_timezone(TIME_ZONE)).strftime(
             "%Y-%m-%dT%H:%M:%S.%f"
         ),
         description="Bill Split",
@@ -52,10 +60,12 @@ class BillSplitTransaction:
         self.anchor_update: Update = (
             anchor_update  # Placeholder for the update object
         )
+        self.identifier = str(uuid4())  # Unique identifier for the transaction
 
     @property
     def json(self):
         return {
+            "id": self.identifier,
             "amount": self.amount,
             "description": self.description,
             "category": self.category,
@@ -65,13 +75,6 @@ class BillSplitTransaction:
             "participants": self.participants,
             "confirmed_states": self.confirmed_states,
         }
-
-
-ONGOING_BILL_SPLIT_TRANSACTIONS: Dict[
-    int, BillSplitTransaction
-] = (
-    {}
-)  # Dictionary to track ongoing transactions, group_id: BillSplitTransaction
 
 
 @authenticate
@@ -109,14 +112,18 @@ async def bill_split_entry(
     )
 
     # Create a new bill split transaction
-    ONGOING_BILL_SPLIT_TRANSACTIONS[group_id] = BillSplitTransaction(
+    transaction = BillSplitTransaction(
         participants={tg_username: {} for tg_username in mentioned_users},
         issuer=issuer,
         anchor_update=update,
     )
-
+    ONGOING_BILL_SPLIT_TRANSACTIONS[group_id] = transaction
     await update.message.reply_text(
-        f"Users that will be included in the bill split: {', '.join(mentioned_users)}"
+        f"Transaction `{transaction.identifier}` has been created",
+        parse_mode="MarkdownV2",
+    )
+    await update.message.reply_text(
+        f"Users that will be included in the bill split: @{', @'.join(mentioned_users)}"
     )
 
     # ask for amount
@@ -486,7 +493,7 @@ async def bill_split_proceed_handler(
             )
             return
 
-    transaction.timestamp = datetime.now(timezone(TIME_ZONE)).strftime(
+    transaction.timestamp = datetime.now(pytz_timezone(TIME_ZONE)).strftime(
         "%Y-%m-%dT%H:%M:%S.%f"
     )
     group_name = update.message.chat.title
@@ -499,6 +506,7 @@ async def bill_split_proceed_handler(
         ), "Transaction not deleted after processing"
         await update.message.reply_text(
             f"Bill split transaction has been successfully processed.\n"
+            f"Transaction ID: {transaction.identifier}\n"
             f"💵 Amount: {transaction.amount} {transaction.currency}\n"
             f"📌 Category: {transaction.category}\n"
             f"📝 Description: {transaction.description}\n"
@@ -562,7 +570,6 @@ async def process_bill_split(
 
     # Check if all participants have confirmed
     try:
-        # todo : check all the conditions
         # Check the confirmation states
         assert all(
             transaction.confirmed_states.values()
