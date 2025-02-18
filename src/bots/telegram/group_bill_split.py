@@ -1,39 +1,33 @@
+from collections import namedtuple
 from datetime import datetime
-from tabnanny import check
-from typing import Dict, List, Union
+from typing import Dict, List, NamedTuple, Union
 
 import requests
 from loguru import logger
-from matplotlib.pyplot import show
 from pytz import timezone
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
-    MessageEntity,
     Update,
 )
-from telegram.ext import (
-    CallbackQueryHandler,
-    CommandHandler,
-    ContextTypes,
-    ConversationHandler,
-    MessageHandler,
-    filters,
-)
+from telegram.ext import ContextTypes
 
 from bots.telegram.auth import authenticate, get_user
 from bots.telegram.reply_handlers import ReplyWaiters
 from bots.telegram.utils import extract_mentioned_usernames
 from config.config import TELEGRAM_BOT_API_BASE_URL, TIME_ZONE
 
-TIMEOUT = 10  # seconds
+API_TIMEOUT = 10  # seconds
+TRANSACTION_TIMEOUT = 600  # seconds
+
+ComplexUser = namedtuple("ComplexUser", ["tg_username", "mm_user"])
 
 
 class BillSplitTransaction:
     def __init__(
         self,
         participants: Dict[str, Union[Dict, None]],
-        issuer=None,
+        issuer: ComplexUser = None,
         amount: float = 0.0,
         category="Bill Split",
         currency="USD",
@@ -67,6 +61,9 @@ class BillSplitTransaction:
             "category": self.category,
             "currency": self.currency,
             "date": self.timestamp,
+            "issuer": self.issuer,
+            "participants": self.participants,
+            "confirmed_states": self.confirmed_states,
         }
 
 
@@ -104,7 +101,12 @@ async def bill_split_entry(
         return
 
     # issuer of the bill split
-    issuer = await get_user(tg_user_id=update.effective_user.id)
+    issuer_tg_id = update.effective_user.id
+    issuer_tg_name = update.effective_user.username
+    issuer = ComplexUser(
+        tg_username=issuer_tg_name,
+        mm_user=await get_user(tg_user_id=issuer_tg_id),
+    )
 
     # Create a new bill split transaction
     ONGOING_BILL_SPLIT_TRANSACTIONS[group_id] = BillSplitTransaction(
@@ -144,7 +146,9 @@ async def bill_split_amount_handler(
     # check if the replier is the same user who initiated the bill split
     if (
         update.message.from_user.id
-        != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer["telegram_id"]
+        != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer.mm_user[
+            "telegram_id"
+        ]
     ):
         await update.message.reply_text(
             "You are not the issuer of this bill split."
@@ -187,7 +191,9 @@ async def show_select_currency(
         return
     if (
         update.message.from_user.id
-        != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer["telegram_id"]
+        != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer.mm_user[
+            "telegram_id"
+        ]
     ):
         await update.message.reply_text(
             "You are not the issuer of this bill split."
@@ -196,7 +202,9 @@ async def show_select_currency(
 
     headers = {"token": token}
     response = requests.get(
-        f"{TELEGRAM_BOT_API_BASE_URL}/users/", headers=headers, timeout=TIMEOUT
+        f"{TELEGRAM_BOT_API_BASE_URL}/users/",
+        headers=headers,
+        timeout=API_TIMEOUT,
     )
     if response.status_code == 200:
         currencies = response.json().get("currencies", [])
@@ -236,7 +244,9 @@ async def bill_split_currency_selection_handler(
     # check if the user is the issuer of the bill split
     if (
         query.from_user.id
-        != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer["telegram_id"]
+        != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer.mm_user[
+            "telegram_id"
+        ]
     ):
         await query.answer("You are not the issuer of this bill split.")
         return
@@ -264,7 +274,9 @@ async def show_select_category(
     # check if the user is the issuer of the bill split
     if (
         query.from_user.id
-        != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer["telegram_id"]
+        != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer.mm_user[
+            "telegram_id"
+        ]
     ):
         await query.answer("You are not the issuer of this bill split.")
         return
@@ -273,7 +285,7 @@ async def show_select_category(
     response = requests.get(
         f"{TELEGRAM_BOT_API_BASE_URL}/categories/",
         headers=headers,
-        timeout=TIMEOUT,
+        timeout=API_TIMEOUT,
     )
     if response.status_code == 200:
         categories = response.json().get("categories", [])
@@ -317,7 +329,9 @@ async def bill_split_category_selection_handler(
     # check if the user is the issuer of the bill split
     if (
         query.from_user.id
-        != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer["telegram_id"]
+        != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer.mm_user[
+            "telegram_id"
+        ]
     ):
         await query.answer("You are not the issuer of this bill split.")
         return
@@ -463,7 +477,9 @@ async def bill_split_proceed_handler(
         # check if the user is the issuer of the bill split
         if (
             update.message.from_user.id
-            != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer["telegram_id"]
+            != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer.mm_user[
+                "telegram_id"
+            ]
         ):
             await update.message.reply_text(
                 "You are not the issuer of this bill split."
@@ -474,7 +490,7 @@ async def bill_split_proceed_handler(
         "%Y-%m-%dT%H:%M:%S.%f"
     )
     group_name = update.message.chat.title
-    transaction.description = f"Bill Split in group {group_name} issued by {transaction.issuer['username']}"
+    transaction.description = f"Bill Split in group {group_name} issued by @{transaction.issuer.tg_username}"
 
     try:
         await process_bill_split(group_id, transaction)
@@ -507,7 +523,9 @@ async def cancel_bill_split_handler(
         # check if the issuer of cancel command is the same user who initiated the bill split
         if (
             update.message.from_user.id
-            != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer["telegram_id"]
+            != ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].issuer.mm_user[
+                "telegram_id"
+            ]
         ):
             await update.message.reply_text(
                 "You are not the issuer of this bill split."
@@ -569,7 +587,7 @@ async def process_bill_split(
             response = requests.get(
                 f"{TELEGRAM_BOT_API_BASE_URL}/accounts/",
                 headers=headers,
-                timeout=TIMEOUT,
+                timeout=API_TIMEOUT,
             )
             if response.status_code == 200:
                 accounts_list = response.json().get("accounts", [])
@@ -628,7 +646,7 @@ async def process_bill_split(
             response = requests.get(
                 f"{TELEGRAM_BOT_API_BASE_URL}/categories/",
                 headers=headers,
-                timeout=TIMEOUT,
+                timeout=API_TIMEOUT,
             )
             if response.status_code == 200:
                 category_list = response.json().get("categories", {})
@@ -647,7 +665,7 @@ async def process_bill_split(
                             "name": transaction.category,
                             "monthly_budget": 0,
                         },
-                        timeout=TIMEOUT,
+                        timeout=API_TIMEOUT,
                     )
                     if response.status_code != 200:
                         logger.error(
@@ -677,7 +695,7 @@ async def process_bill_split(
                     "date": transaction.timestamp,
                     "account": tgusername2account[tg_username]["name"],
                 },
-                timeout=TIMEOUT,
+                timeout=API_TIMEOUT,
             )
             if response.status_code != 200:
                 error_detail = response.json().get("detail", "Unknown error")
