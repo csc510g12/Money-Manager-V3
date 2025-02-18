@@ -98,13 +98,13 @@ async def group_chat_handler(
     if "/menu" in text:
         await update.message.reply_text(get_group_chat_menu_commands())
         return
-    # if is bill split command
-    elif "/bill_split" in text:
-        await bill_split_entry(update, context)
-        return
     # if is bill split proceed command
     elif "/bill_split_proceed" in text:
         await bill_split_proceed_handler(update, context)
+        return
+    # if is bill split command
+    elif "/bill_split" in text:
+        await bill_split_entry(update, context)
         return
     # if is cancel command
     elif "/cancel" in text:
