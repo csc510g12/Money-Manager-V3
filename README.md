@@ -4,9 +4,9 @@
 
 - [Money Manager](#money-manager)
   - [👥 Functionality](#-functionality)
-  - [👨‍💻 Developer Friendly](#-developer-friendly)
-  - [🛠️ Installation and Dev](#️-installation-and-dev)
-  - [👨‍💻 Screenshots of Functionalities](#-screenshots-of-functionalities)
+  - [👨‍💻 Developer Friendly](#%E2%80%8D-developer-friendly)
+  - [🛠️ Installation and Dev](#-installation-and-dev)
+  - [👨‍💻 Screenshots of Functionalities](#%E2%80%8D-screenshots-of-functionalities)
   - [🤝 Contributing](#-contributing)
   - [📜 Code of Conduct](#-code-of-conduct)
 
@@ -24,8 +24,7 @@ A REST API application for managing expenses. Build your own automation—be it 
 
 ✅ Quality
 
-[![Pre-commit](https://github.com/csc510g12/project2/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/csc510g12/project2/actions/workflows/pre-commit.yml)
-[![Pytest](https://github.com/csc510g12/project2/actions/workflows/pytest.yml/badge.svg)](https://github.com/csc510g12/project2/actions/workflows/pytest.yml) [![codecov](https://codecov.io/gh/csc510g12/project2/graph/badge.svg?token=HxVOHc7Prp)](https://codecov.io/gh/csc510g12/project2) [![badge_total_tests](https://img.shields.io/badge/tests-162-blue?style=plastic&logo=pytest&logoColor=white)](https://github.com/csc510g12/project2/tree/main/tests)
+[![Pre-commit](https://github.com/csc510g12/project2/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/csc510g12/project2/actions/workflows/pre-commit.yml) [![Pytest](https://github.com/csc510g12/project2/actions/workflows/pytest.yml/badge.svg)](https://github.com/csc510g12/project2/actions/workflows/pytest.yml) [![codecov](https://codecov.io/gh/csc510g12/project2/graph/badge.svg?token=HxVOHc7Prp)](https://codecov.io/gh/csc510g12/project2) [![badge_total_tests](https://img.shields.io/badge/tests-162-blue?style=plastic&logo=pytest&logoColor=white)](https://github.com/csc510g12/project2/tree/main/tests)
 
 
 Code coverage graph:
@@ -75,7 +74,7 @@ Refer to [INSTALL](INSTALL.md) for the guidance and follow the steps.
 | **Add Categories**     | <img src="https://github.com/user-attachments/assets/ca18b4a7-bbfc-4b79-8c31-aad577fa15bf" alt="Categories" width="200"></br> | **View Categories**   | <img src="https://github.com/user-attachments/assets/1273770e-83f2-4c0f-9109-58cdb3c4f987" alt="Categories" width="200"></br> | **Update Categories**   | <img src="https://github.com/user-attachments/assets/73d693fc-8967-4bf6-9052-1b3018cdfc64" alt="Categories" width="200"></br> |
 | **Delete Categories**  | <img src="https://github.com/user-attachments/assets/7a4feab0-d8d5-49be-97ce-d291cbc12fb0" alt="Categories" width="200"></br> | **Add Accounts**      | <img src="https://github.com/user-attachments/assets/c6bdb2d8-0bd3-45f6-b237-be0dd4b2e8f8" alt="Accounts" width="200"></br>   | **View Accounts**       | <img src="https://github.com/user-attachments/assets/f86b08cb-aae0-4e1c-9076-67274587f288" alt="Accounts" width="200"></br>   |
 | **Update Accounts**    | <img src="https://github.com/user-attachments/assets/294f0b80-7883-4c93-9967-c37a16a4cddf" alt="Accounts" width="200"></br>   | **Delete Accounts**   | <img src="https://github.com/user-attachments/assets/18870a19-eb0e-4cdd-84ff-cbd1b4cccfab" alt="Accounts" width="200"></br>   | **Analytics**           | <img src="https://github.com/user-attachments/assets/c30c1c10-b4c5-4947-affe-88a59f608839" alt="Analytics" width="200"></br>  |
-| **Export Range**       | <img src="https://github.com/user-attachments/assets/e80f74ce-9417-4403-8c4a-fc1d3c3338b8" alt="Exports" width="200"></br>    | **Export Format**     | <img src="https://github.com/user-attachments/assets/35f20478-429e-4100-b163-558ab11e91f0" alt="Exports" width="200"></br>    | **Cancel**              | <img src="https://github.com/user-attachments/assets/1f0e054c-5c0f-45e7-8071-4401ad56638a" alt="Cancel" width="200"></br>     |
+| **Export Range**       | <img src="https://github.com/user-attachments/assets/e80f74ce-9417-4403-8c4a-fc1d3c3338b8" alt="Exports" width="200"></br>    | **Export Format**     | <img src="https://github.com/user-attachments/assets/35f20478-429e-4100-b163-558ab11e91f0" alt="Exports" width="200"></br>    | **Group Bill Split**              | <img src="https://github.com/user-attachments/assets/e02ffaa4-6e7d-4501-9656-80d1cc435ea6" alt="Cancel" width="200"></br>     |
 
 ## 🤝 Contributing
 

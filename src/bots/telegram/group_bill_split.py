@@ -32,6 +32,20 @@ ONGOING_BILL_SPLIT_TRANSACTIONS: Dict[
 
 
 class BillSplitTransaction:
+    """Class to represent a bill split transaction.
+
+    Attributes:
+        participants (Dict[str, Union[Dict, None]]): The participants in the bill split transaction.
+        issuer (ComplexUser): The user who initiated the bill split.
+        amount (float): The amount to be split.
+        category (str): The category of the transaction.
+        currency (str): The currency of the transaction.
+        timestamp (str): The timestamp of the transaction.
+        description (str): The description of the transaction.
+        anchor_update (Update): The corresponding update in tg group chat.
+        identifier (str): The unique identifier for the transaction.
+    """
+
     def __init__(
         self,
         participants: Dict[str, Union[Dict, None]],
@@ -45,6 +59,18 @@ class BillSplitTransaction:
         description="Bill Split",
         anchor_update=None,
     ):
+        """Initialize the BillSplitTransaction object.
+
+        Args:
+            participants (Dict[str, Union[Dict, None]]): The participants in the bill split transaction.
+            issuer (ComplexUser, optional): issuer of the bill split. Defaults to None.
+            amount (float, optional): The amount to be split. Defaults to 0.0.
+            category (str, optional): The category of the transaction. Defaults to "Bill Split".
+            currency (str, optional): The currency of the transaction. Defaults to "USD".
+            timestamp (_type_, optional): The timestamp of the transaction. Defaults to current time.
+            description (str, optional): The description of the transaction. Defaults to "Bill Split".
+            anchor_update (_type_, optional): The corresponding update in tg group chat. Defaults to None.
+        """
         self.issuer = issuer  # the user who initiated the bill split
         self.participants = participants
         self.confirmed_states = (
@@ -81,7 +107,26 @@ class BillSplitTransaction:
 async def bill_split_entry(
     update: Update, context: ContextTypes.DEFAULT_TYPE, token: str
 ) -> None:
-    """Handle the /bill_split command."""
+    """Entry point for the bill split process.
+
+    Args:
+        update (Update): The update object.
+        context (ContextTypes.DEFAULT_TYPE): The context object.
+        token (str): The user token.
+
+    Raises:
+        ValueError: If the user is not the issuer of the bill split.
+
+    Returns:
+        None
+
+    Behavior:
+        1. Check if there is an ongoing bill split transaction in the group.
+        2. Extract the mentioned users.
+        3. Create a new bill split transaction.
+        4. Ask for the amount to be split.
+        5. Wait for the user response before proceeding.
+    """
     group_id = update.message.chat_id
 
     if group_id in ONGOING_BILL_SPLIT_TRANSACTIONS:
@@ -141,7 +186,26 @@ async def bill_split_entry(
 async def bill_split_amount_handler(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    """Handle user input for bill amount if it is a reply to the request."""
+    """Handle the amount to be split for the bill split transaction.
+
+    Args:
+        update (Update): The update object.
+        context (ContextTypes.DEFAULT_TYPE): The context object.
+
+    Raises:
+        ValueError: If the user is not the issuer of the bill split.
+        e: If the amount entered is invalid.
+
+    Returns:
+        None
+
+    Behavior:
+        1. Check if the user is the issuer of the bill split.
+        2. Extract the amount from the user response.
+        3. Store the amount in the bill split transaction.
+        4. Ask for the currency to be used for the transaction.
+        5. Wait for the user response before
+    """
     group_id = update.message.chat_id
 
     if group_id not in ONGOING_BILL_SPLIT_TRANSACTIONS:
@@ -189,6 +253,22 @@ async def bill_split_amount_handler(
 async def show_select_currency(
     update: Update, context: ContextTypes.DEFAULT_TYPE, token: str
 ) -> None:
+    """Show the available currencies to the user for the bill split.
+
+    Args:
+        update (Update): The update object.
+        context (ContextTypes.DEFAULT_TYPE): The context object.
+        token (str): The user token.
+
+    Returns:
+        None
+
+    Behavior:
+        1. Check if the user is the issuer of the bill split.
+        2. Fetch the available currencies from the API.
+        3. Show the available currencies to the user.
+    """
+
     # check if the user is the issuer of the bill split
     group_id = update.message.chat_id
     if group_id not in ONGOING_BILL_SPLIT_TRANSACTIONS:
@@ -240,7 +320,22 @@ async def show_select_currency(
 async def bill_split_currency_selection_handler(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    """Handle currency selection for bill split."""
+    """Handle currency selection for bill split.
+
+    Args:
+        update (Update): The update object.
+        context (ContextTypes.DEFAULT_TYPE): The context object.
+
+    Returns:
+        None
+
+    Behavior:
+        1. Check if the user is the issuer of the bill split.
+        2. Extract the selected currency.
+        3. Store the selected currency in the bill split transaction.
+        4. Ask for the category to be used for the transaction.
+        5. Wait for the user response before proceeding.
+    """
     query = update.callback_query
     group_id = query.message.chat_id
 
@@ -270,7 +365,21 @@ async def bill_split_currency_selection_handler(
 async def show_select_category(
     update: Update, context: ContextTypes.DEFAULT_TYPE, token: str
 ) -> None:
-    """Show the selected category for the bill split."""
+    """Show the available categories to the user for the bill split.
+
+    Args:
+        update (Update): The update object.
+        context (ContextTypes.DEFAULT_TYPE): The context object.
+        token (str): The user token.
+
+    Returns:
+        None
+
+    Behavior:
+        1. Check if the user is the issuer of the bill split.
+        2. Fetch the available categories from the API.
+        3. Show the available categories to the user
+    """
     query = update.callback_query
     group_id = query.message.chat_id
 
@@ -325,7 +434,22 @@ async def show_select_category(
 async def bill_split_category_selection_handler(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    """Handle category selection for bill split."""
+    """Handle category selection for bill split.
+
+    Args:
+        update (Update): The update object.
+        context (ContextTypes.DEFAULT_TYPE): The context object.
+
+    Returns:
+        None
+
+    Behavior:
+        1. Check if the user is the issuer of the bill split.
+        2. Extract the selected category.
+        3. Store the selected category in the bill split transaction.
+        4. Ask for the confirmation of the bill split.
+        5. Wait for the user response before proceeding.
+    """
     query = update.callback_query
     group_id = query.message.chat_id
 
@@ -352,6 +476,20 @@ async def bill_split_category_selection_handler(
 async def show_confirm_bill_split(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
+    """Show the confirmation message for the bill split.
+
+    Args:
+        update (Update): The update object.
+        context (ContextTypes.DEFAULT_TYPE): The context object.
+
+    Returns:
+        None
+
+    Behavior:
+        1. Confirm the amount and proceed with the bill split.
+        2. Send a new message instead of replying to the message.
+    """
+
     chat_id = update.callback_query.message.chat_id
 
     # Confirm the amount and proceed with the bill split
@@ -391,7 +529,20 @@ async def show_confirm_bill_split(
 async def confirm_bill_split_callback_handler(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    """Handle confirmation button clicks."""
+    """Handle the confirmation of the bill split.
+
+    Args:
+        update (Update): The update object.
+        context (ContextTypes.DEFAULT_TYPE): The context object.
+
+    Returns:
+        None
+
+    Behavior:
+        1. Confirm the bill split for the mentioned user.
+        2. Update the button states by removing the confirmed user.
+        3. Proceed with the bill split process if all users have confirmed.
+    """
     query = update.callback_query
     user = query.from_user
     mentioned_username = query.data.split("_", 1)[1].removeprefix(
@@ -469,7 +620,22 @@ async def bill_split_proceed_handler(
     group_id=None,
     token: str = None,
 ) -> None:
-    """Handle the bill split process."""
+    """Proceed with the bill split process.
+
+    Args:
+        update (Update): The update object.
+        context (ContextTypes.DEFAULT_TYPE): The context object.
+        check_status (bool, optional): Flag to check the status of the bill split. Defaults to True.
+        group_id (_type_, optional): The group ID where the transaction is taking place. Defaults to None.
+        token (str, optional): The user token. Defaults to None.
+
+    Returns:
+        None
+
+    Behavior:
+        1. Check if the user is the issuer of the bill split.
+        2. Process the bill split transaction
+    """
     group_id = group_id or update.message.chat_id
 
     if group_id not in ONGOING_BILL_SPLIT_TRANSACTIONS:
@@ -525,7 +691,20 @@ async def bill_split_proceed_handler(
 async def cancel_bill_split_handler(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    """Cancel the bill split process."""
+    """Cancel the bill split process.
+
+    Args:
+        update (Update): The update object.
+        context (ContextTypes.DEFAULT_TYPE): The context object.
+
+    Returns:
+        None
+
+    Behavior:
+        1. Check if the user is the issuer of the bill split.
+        2. Cancel the bill split process.
+    """
+
     group_id = update.message.chat_id
 
     if group_id not in ONGOING_BILL_SPLIT_TRANSACTIONS:
@@ -565,8 +744,8 @@ async def process_bill_split(
     1. Check the confirmation states, and check through all the participants if they are authenticated
     2. Check accounts for each participant, make sure in any of their account, there is target currency, and with enough balance
     3. Check accounts for each participant, during which
-        3.1 If category is not found, create it
-        3.2 If
+        3.1 If category is not found, create it for the user
+        3.2 If category is created, inform the user
     4. If any of previous steps failed, return error message
     5. If all steps passed, proceed with the transaction
 
