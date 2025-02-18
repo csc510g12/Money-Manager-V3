@@ -21,10 +21,10 @@ from telegram.ext import (
 from bots.telegram.auth import authenticate
 from bots.telegram.utils import private_chat_cancel
 from config.config import (
-    GMAIL_SMTP_PASSWORD,
-    GMAIL_SMTP_PORT,
-    GMAIL_SMTP_SERVER,
-    GMAIL_SMTP_USERNAME,
+    MAIL_SMTP_PASSWORD,
+    MAIL_SMTP_PORT,
+    MAIL_SMTP_SERVER,
+    MAIL_SMTP_USERNAME,
     MONGO_URI,
     TELEGRAM_BOT_API_BASE_URL,
     TIME_ZONE,
@@ -365,7 +365,7 @@ async def send_email(email: str, files: list, context: dict) -> bool:
     """Send email with exported files"""
     try:
         msg = MIMEMultipart()
-        msg["From"] = GMAIL_SMTP_USERNAME
+        msg["From"] = MAIL_SMTP_USERNAME
         msg["To"] = email
         msg["Subject"] = "Your Exported Data"
 
@@ -381,9 +381,9 @@ async def send_email(email: str, files: list, context: dict) -> bool:
             msg.attach(attachment)
 
         # Connect to SMTP server
-        with smtplib.SMTP(GMAIL_SMTP_SERVER, GMAIL_SMTP_PORT) as server:
+        with smtplib.SMTP(MAIL_SMTP_SERVER, MAIL_SMTP_PORT) as server:
             server.starttls()
-            server.login(GMAIL_SMTP_USERNAME, GMAIL_SMTP_PASSWORD)
+            server.login(MAIL_SMTP_USERNAME, MAIL_SMTP_PASSWORD)
             server.send_message(msg)
         return True
     except Exception as e:
