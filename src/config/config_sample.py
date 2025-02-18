@@ -50,11 +50,14 @@ cancel - To cancel any operation
 TELEGRAM_GROUP_CHAT_COMMAND_TEXT = """
 menu - Display available commands
 bill_split - Split a bill with group members
+bill_split_proceed - Proceed with ongoing bill split
+cancel - Cancel the ongoing bill split
 """
 
-GMAIL_SMTP_SERVER = os.getenv("GMAIL_SMTP_SERVER", "smtp.gmail.com")
-GMAIL_SMTP_PORT = int(os.getenv("GMAIL_SMTP_PORT", "587"))
-GMAIL_SMTP_USERNAME = os.getenv("GMAIL_SMTP_USERNAME", "")
-GMAIL_SMTP_PASSWORD = os.getenv("GMAIL_SMTP_PASSWORD", "")
+MAIL_SMTP_SERVER = os.getenv("GMAIL_SMTP_SERVER", "smtp.gmail.com")
+MAIL_SMTP_PORT = int(os.getenv("GMAIL_SMTP_PORT", "587"))
+MAIL_SMTP_USERNAME = os.getenv("GMAIL_SMTP_USERNAME", "")
+MAIL_SMTP_PASSWORD = os.getenv("GMAIL_SMTP_PASSWORD", "")
+
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")

@@ -471,16 +471,17 @@ async def bill_split_proceed_handler(
 ) -> None:
     """Handle the bill split process."""
     group_id = group_id or update.message.chat_id
+
+    if group_id not in ONGOING_BILL_SPLIT_TRANSACTIONS:
+        await update.message.reply_text(
+            "No active bill split transaction in this group."
+        )
+        return
+
     transaction = ONGOING_BILL_SPLIT_TRANSACTIONS[group_id]
     update = update if check_status else transaction.anchor_update
 
     if check_status:
-        if group_id not in ONGOING_BILL_SPLIT_TRANSACTIONS:
-            await update.message.reply_text(
-                "No active bill split transaction in this group."
-            )
-            return
-
         # check if the user is the issuer of the bill split
         if (
             update.message.from_user.id
@@ -526,6 +527,12 @@ async def cancel_bill_split_handler(
 ) -> None:
     """Cancel the bill split process."""
     group_id = update.message.chat_id
+
+    if group_id not in ONGOING_BILL_SPLIT_TRANSACTIONS:
+        await update.message.reply_text(
+            "No active bill split transaction in this group."
+        )
+        return
 
     if group_id in ONGOING_BILL_SPLIT_TRANSACTIONS:
         # check if the issuer of cancel command is the same user who initiated the bill split
