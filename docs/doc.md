@@ -1,3 +1,19 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Money Manager Telegram Bot Documentation](#money-manager-telegram-bot-documentation)
+  - [Overview](#overview)
+    - [Private Chat](#private-chat)
+  - [Group Chat](#group-chat)
+    - [/menu](#menu)
+    - [/bill_split](#bill_split)
+    - [/bill_split_proceed](#bill_split_proceed)
+    - [/cancel](#cancel)
+  - [Notes](#notes)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 
 # Money Manager Telegram Bot Documentation
 
@@ -8,7 +24,7 @@ The Money Manager Bot is designed to assist users with managing their personal f
 
 ---
 
-### Commands
+### Private Chat
 
 #### /start
 **Functionality:** Initiates the bot and displays a welcome message along with available commands.
@@ -92,8 +108,35 @@ The Money Manager Bot is designed to assist users with managing their personal f
 
 ---
 
+## Group Chat
+
+### /menu
+**Functionality:** Displays a list of all available commands grouped by categories.
+**Inputs:** None.
+**Outputs:** A categorized command menu.
+**Notes:** Users should be logged in to access personalized commands.
+
+### /bill_split
+**Functionality:** Initiates the process to split a bill among group members.
+**Inputs:** Total bill amount, number of members, and their names.
+**Outputs:** Individual share amounts for each member, the states of confirmations, the result of the bill split.
+**Notes:** Requires user authentication.
+
+### /bill_split_proceed
+**Functionality:** Proceeds with the bill split manually.
+**Inputs:** None.
+**Outputs:** Confirmation of the bill split or an error message.
+**Notes:** Requires user confirmation.
+
+### /cancel
+**Functionality:** Cancels the group bill split transaction.
+**Inputs:** None.
+**Outputs:** Confirmation of the cancellation or an error message.
+**Notes:** Requires user confirmation.
+
+---
+
 ## Notes
 - All commands that modify data require user authentication.
 - Commands are designed with user interaction in mind, providing inline buttons where applicable.
 - Data integrity and privacy are ensured via secure APIs.
-
