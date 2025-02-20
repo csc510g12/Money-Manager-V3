@@ -1,5 +1,6 @@
 """Expense management handlers for the Telegram bot."""
 
+from calendar import monthrange
 from datetime import datetime
 
 import requests
@@ -217,6 +218,101 @@ async def account(
     return DATE_OPTION
 
 
+async def send_budget_alert(
+    update: Update,
+    category: str,
+    amount: float,
+    currency: str,
+    token: str,
+) -> None:
+    """
+    Check if an expense exceeds the category budget and send an alert if needed.
+
+    Args:
+        update: The Telegram update object
+        category: The expense category
+        amount: The expense amount
+        currency: The expense currency
+        token: The authentication token
+    """
+    try:
+        # Get category budget
+        headers = {"token": token}
+        category_response = requests.get(
+            f"{TELEGRAM_BOT_API_BASE_URL}/categories/",
+            headers=headers,
+            timeout=TIMEOUT,
+        )
+
+        if category_response.status_code != 200:
+            return  # Silently return if we can't get categories
+
+        categories = category_response.json().get("categories", {})
+        category_budget = float(
+            categories.get(category, {}).get("monthly_budget", 0)
+        )
+
+        if category_budget == 0:
+            return  # No budget set for this category
+
+        # Get current month's expenses
+        today = datetime.now()
+        _, last_day = monthrange(today.year, today.month)
+        month_start = today.replace(day=1).strftime("%Y-%m-%dT%H:%M:%S.%f")
+        month_end = today.replace(day=last_day).strftime(
+            "%Y-%m-%dT%H:%M:%S.%f"
+        )
+
+        expenses_response = requests.get(
+            f"{TELEGRAM_BOT_API_BASE_URL}/expenses/?start_date={month_start}&end_date={month_end}&category={category}",
+            headers=headers,
+            timeout=TIMEOUT,
+        )
+
+        if expenses_response.status_code != 200:
+            return  # Silently return if we can't get expenses
+
+        expenses = expenses_response.json().get("expenses", [])
+        total_expenses = sum(
+            float(exp["amount"])
+            for exp in expenses
+            if exp["currency"] == currency
+            if exp["category"] == category
+        )
+
+        # Check if budget is exceeded
+        if total_expenses > category_budget:
+            percentage_exceeded = (
+                (total_expenses - category_budget) / category_budget
+            ) * 100
+            alert_message = (
+                f"⚠️ *Budget Alert*\n\n"
+                f"Category: *{category}*\n"
+                f"Monthly Budget: *{category_budget} {currency}*\n"
+                f"Total Expenses: *{total_expenses:.2f} {currency}*\n"
+                f"Exceeded by: *{percentage_exceeded:.1f}%*\n\n"
+                f"Consider reviewing your spending in this category."
+            )
+
+            if update.message:
+                await update.message.reply_text(
+                    alert_message,
+                    parse_mode="Markdown",
+                    reply_to_message_id=update.message.message_id,
+                )
+            elif update.callback_query:
+                await update.callback_query.message.reply_text(
+                    alert_message, parse_mode="Markdown"
+                )
+
+    except requests.RequestException as e:
+        # Log the error but don't interrupt the user flow
+        print(f"Error checking budget alert: {str(e)}")
+    except Exception as e:
+        # Log any other unexpected errors
+        print(f"Unexpected error in budget alert: {str(e)}")
+
+
 @authenticate
 async def handle_date_option(
     update: Update, context: ContextTypes.DEFAULT_TYPE, token: str
@@ -230,8 +326,9 @@ async def handle_date_option(
             "%Y-%m-%dT%H:%M:%S.%f"
         )
         # ...existing code to finalize expense addition...
+        amount_str = str(float(context.user_data["amount"]))
         expense_data = {
-            "amount": str(float(context.user_data["amount"])),
+            "amount": amount_str,
             "description": context.user_data["description"],
             "category": context.user_data["category"],
             "currency": context.user_data["currency"],
@@ -248,6 +345,13 @@ async def handle_date_option(
         if response.status_code == 200:
             await query.message.edit_text(
                 "Expense added successfully!\nClick /expenses_view to see updated list."
+            )
+            await send_budget_alert(
+                update,
+                expense_data["category"],
+                float(amount_str),
+                expense_data["currency"],
+                token,
             )
         else:
             error_detail = response.json().get("detail", "Unknown error")
@@ -303,6 +407,13 @@ async def date(
         if response.status_code == 200:
             await update.callback_query.message.edit_text(
                 "Expense added successfully!\nClick /expenses_view to see updated list."
+            )
+            await send_budget_alert(
+                update,
+                expense_data["category"],
+                float(amount_str),
+                expense_data["currency"],
+                token,
             )
         else:
             error_detail = response.json().get("detail", "Unknown error")
