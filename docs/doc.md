@@ -1,3 +1,14 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Money Manager Telegram Bot Documentation](#money-manager-telegram-bot-documentation)
+  - [Overview](#overview)
+    - [Commands](#commands)
+  - [Notes](#notes)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 
 # Money Manager Telegram Bot Documentation
 
@@ -42,7 +53,7 @@ The Money Manager Bot is designed to assist users with managing their personal f
 **Functionality:** Begins the process to add a new expense.
 **Inputs:** Amount, description, category, currency, and date (optional).
 **Outputs:** Confirmation of successful expense addition or an error message.
-**Notes:** Requires authentication.
+**Notes:** Requires authentication. Sends an alert if the expense makes user go over budget in category.
 
 #### /expenses_view
 **Functionality:** Displays a paginated list of all expenses.
@@ -96,4 +107,3 @@ The Money Manager Bot is designed to assist users with managing their personal f
 - All commands that modify data require user authentication.
 - Commands are designed with user interaction in mind, providing inline buttons where applicable.
 - Data integrity and privacy are ensured via secure APIs.
-
