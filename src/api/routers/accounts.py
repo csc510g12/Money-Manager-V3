@@ -35,6 +35,12 @@ class AccountUpdate(BaseModel):
     balance: Optional[float] = None
     currency: Optional[str] = None
 
+class TransferRequest(BaseModel):
+    """Schema for updating transfer request"""
+    source_account: str
+    destination_account: str
+    amount: float
+
 
 @router.post("/")
 async def create_account(account: AccountCreate, token: str = Header(None)):
@@ -204,3 +210,63 @@ async def delete_account(account_id: str, token: str = Header(None)):
         return {"message": "Account deleted successfully"}
 
     raise HTTPException(status_code=500, detail="Failed to delete account")
+
+@router.post("/transfer")
+async def transfer_funds(transfer: TransferRequest, token: str = Header(None)):
+    """
+    Transfer funds between two accounts for the authenticated user.
+
+    Args:
+        transfer (TransferRequest): Contains source_account, destination_account, and amount.
+        token (str): Authentication token.
+
+    Returns:
+        dict: A message confirming the transfer.
+    """
+    user_id = await verify_token(token)
+    
+    if transfer.amount <= 0:
+        raise HTTPException(status_code=400, detail="Transfer amount must be positive")
+    
+    # Retrieve the source account
+    source = await accounts_collection.find_one({
+        "_id": ObjectId(transfer.source_account),
+        "user_id": user_id
+    })
+    if not source:
+        raise HTTPException(status_code=404, detail="Source account not found")
+    
+    # Retrieve the destination account
+    destination = await accounts_collection.find_one({
+        "_id": ObjectId(transfer.destination_account),
+        "user_id": user_id
+    })
+    if not destination:
+        raise HTTPException(status_code=404, detail="Destination account not found")
+    
+    # Check if the source account has enough funds
+    if source["balance"] < transfer.amount:
+        raise HTTPException(status_code=400, detail="Insufficient funds in source account")
+    
+    # Debit the source account
+    result_source = await accounts_collection.update_one(
+        {"_id": ObjectId(transfer.source_account)},
+        {"$inc": {"balance": -transfer.amount}}
+    )
+    if result_source.modified_count != 1:
+        raise HTTPException(status_code=500, detail="Failed to debit source account")
+    
+    # Credit the destination account
+    result_destination = await accounts_collection.update_one(
+        {"_id": ObjectId(transfer.destination_account)},
+        {"$inc": {"balance": transfer.amount}}
+    )
+    if result_destination.modified_count != 1:
+        # Rollback the debit in case of failure
+        await accounts_collection.update_one(
+            {"_id": ObjectId(transfer.source_account)},
+            {"$inc": {"balance": transfer.amount}}
+        )
+        raise HTTPException(status_code=500, detail="Failed to credit destination account")
+    
+    return {"message": "Transfer successful"}
