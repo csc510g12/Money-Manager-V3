@@ -350,3 +350,17 @@ class TestAdditionalCategoryCases:
         # Try fetching a non-existent category
         response = await async_client_auth.get("/categories/!(*@ (@!()))")
         assert response.status_code == 404, response.json()
+
+@pytest.mark.anyio
+class TestCategoryBoundaryValues:
+    async def test_category_extremely_high_budget(self, async_client_auth: AsyncClient):
+        """
+        Test creating a category with an extremely high monthly budget.
+        """
+        payload = {
+            "name": "High Budget Category",
+            "monthly_budget": 1e9
+        }
+        response = await async_client_auth.post("/categories/", json=payload)
+        # Expect success if the number is within a valid range.
+        assert response.status_code == 200, response.json()
