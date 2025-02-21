@@ -4,7 +4,12 @@
 
 - [Money Manager Telegram Bot Documentation](#money-manager-telegram-bot-documentation)
   - [Overview](#overview)
-    - [Commands](#commands)
+    - [Private Chat](#private-chat)
+  - [Group Chat](#group-chat)
+    - [/menu](#menu)
+    - [/bill_split](#bill_split)
+    - [/bill_split_proceed](#bill_split_proceed)
+    - [/cancel](#cancel)
   - [Notes](#notes)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -19,7 +24,7 @@ The Money Manager Bot is designed to assist users with managing their personal f
 
 ---
 
-### Commands
+### Private Chat
 
 #### /start
 **Functionality:** Initiates the bot and displays a welcome message along with available commands.
@@ -100,6 +105,34 @@ The Money Manager Bot is designed to assist users with managing their personal f
 **Inputs:** Date range (optional) and file format (CSV, PDF, Excel).
 **Outputs:** File download or email confirmation.
 **Notes:** Users can export data for specific date ranges.
+
+---
+
+## Group Chat
+
+### /menu
+**Functionality:** Displays a list of all available commands grouped by categories.
+**Inputs:** None.
+**Outputs:** A categorized command menu.
+**Notes:** Users should be logged in to access personalized commands.
+
+### /bill_split
+**Functionality:** Initiates the process to split a bill among group members.
+**Inputs:** Total bill amount, number of members, and their names.
+**Outputs:** Individual share amounts for each member, the states of confirmations, the result of the bill split.
+**Notes:** Requires user authentication.
+
+### /bill_split_proceed
+**Functionality:** Proceeds with the bill split manually.
+**Inputs:** None.
+**Outputs:** Confirmation of the bill split or an error message.
+**Notes:** Requires user confirmation.
+
+### /cancel
+**Functionality:** Cancels the group bill split transaction.
+**Inputs:** None.
+**Outputs:** Confirmation of the cancellation or an error message.
+**Notes:** Requires user confirmation.
 
 ---
 

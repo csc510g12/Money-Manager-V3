@@ -320,3 +320,100 @@ class TestAccountDelete:
         )
         assert response.status_code == 404
         assert response.json()["detail"] == "Account not found"
+
+
+@pytest.mark.anyio
+class TestAccountEdgeCases:
+    async def test_create_account_extremely_high_balance(
+        self, async_client_auth: AsyncClient
+    ):
+        """
+        Test creating an account with an extremely high balance.
+        This verifies that very large numbers are handled correctly.
+        """
+        payload = {
+            "name": "High Balance",
+            "balance": 1e15,  # extremely high balance
+            "currency": "USD",
+        }
+        response = await async_client_auth.post("/accounts/", json=payload)
+        # Adjust expected status if your business rules allow such a number.
+        assert response.status_code == 200, response.json()
+
+    async def test_update_account_with_no_changes(
+        self, async_client_auth: AsyncClient
+    ):
+        """
+        Test updating an account without providing any fields to update.
+        Expect the system to either reject the update or return a specific error.
+        """
+        # Create an account first.
+        create_resp = await async_client_auth.post(
+            "/accounts/",
+            json={"name": "No Change", "balance": 1000.0, "currency": "USD"},
+        )
+        account_id = create_resp.json()["account_id"]
+
+        # Send an update with an empty JSON body.
+        response = await async_client_auth.put(
+            f"/accounts/{account_id}", json={}
+        )
+        # Expect a 400/422 error indicating no fields were provided.
+        assert response.status_code in (400, 422), response.json()
+
+    async def test_update_account_with_extra_fields(
+        self, async_client_auth: AsyncClient
+    ):
+        """
+        Test updating an account with additional unexpected fields.
+        The endpoint should ignore extra fields and process the update correctly.
+        """
+        # Create an account.
+        create_resp = await async_client_auth.post(
+            "/accounts/",
+            json={
+                "name": "Extra Fields",
+                "balance": 1000.0,
+                "currency": "USD",
+            },
+        )
+        account_id = create_resp.json()["account_id"]
+
+        # Send an update including an extra field.
+        update_payload = {
+            "balance": 1500.0,
+            "currency": "EUR",
+            "extra": "value",
+        }
+        response = await async_client_auth.put(
+            f"/accounts/{account_id}", json=update_payload
+        )
+        # Expect a successful update ignoring the extra field.
+        assert response.status_code == 200, response.json()
+
+    async def test_delete_account_affects_listing(
+        self, async_client_auth: AsyncClient
+    ):
+        """
+        Test that once an account is deleted, it no longer appears in the list
+        of all accounts.
+        """
+        # Create an account.
+        create_resp = await async_client_auth.post(
+            "/accounts/",
+            json={
+                "name": "To Be Deleted",
+                "balance": 500.0,
+                "currency": "USD",
+            },
+        )
+        account_id = create_resp.json()["account_id"]
+
+        # Delete the account.
+        del_resp = await async_client_auth.delete(f"/accounts/{account_id}")
+        assert del_resp.status_code == 200, del_resp.json()
+
+        # Retrieve all accounts and verify the deleted account is not present.
+        get_resp = await async_client_auth.get("/accounts/")
+        account_ids = [acc["_id"] for acc in get_resp.json()["accounts"]]
+        assert account_id not in account_ids
