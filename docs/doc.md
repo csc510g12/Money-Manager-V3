@@ -58,7 +58,7 @@ The Money Manager Bot is designed to assist users with managing their personal f
 **Functionality:** Begins the process to add a new expense.
 **Inputs:** Amount, description, category, currency, and date (optional).
 **Outputs:** Confirmation of successful expense addition or an error message.
-**Notes:** Requires authentication.
+**Notes:** Requires authentication. Sends an alert if the expense makes user go over budget in category.
 
 #### /expenses_view
 **Functionality:** Displays a paginated list of all expenses.

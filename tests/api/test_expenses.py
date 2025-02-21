@@ -1,9 +1,9 @@
 # test_expenses.py
 import datetime
+from datetime import datetime
 from unittest.mock import patch
 
 import pytest
-from datetime import datetime
 from bson import ObjectId
 from fastapi import HTTPException
 from httpx import AsyncClient
@@ -144,9 +144,7 @@ class TestExpenseAdd:
         )
         assert response.status_code == 200, response.json()
         expense_date = response.json()["expense"]["date"]
-        assert isinstance(
-            expense_date, str
-        ) and datetime.fromisoformat(
+        assert isinstance(expense_date, str) and datetime.fromisoformat(
             expense_date
         ), "The date should be a valid ISO datetime"
 
@@ -897,6 +895,7 @@ async def test_currency_conversion(async_client_auth: AsyncClient):
     assert response.status_code == 200
     assert response.json()["balance"] == balance
 
+
 @pytest.mark.anyio
 class TestDateBoundaryValues:
     async def test_leap_day_valid(self, async_client_auth: AsyncClient):
@@ -909,7 +908,7 @@ class TestDateBoundaryValues:
             "category": "Food",
             "description": "Leap day expense",
             "account_name": "Checking",
-            "date": "2024-02-29T12:00:00"
+            "date": "2024-02-29T12:00:00",
         }
         response = await async_client_auth.post("/expenses/", json=payload)
         assert response.status_code == 200, response.json()
@@ -924,11 +923,12 @@ class TestDateBoundaryValues:
             "category": "Food",
             "description": "Invalid leap day expense",
             "account_name": "Checking",
-            "date": "2023-02-29T12:00:00"
+            "date": "2023-02-29T12:00:00",
         }
         response = await async_client_auth.post("/expenses/", json=payload)
         # Expect a validation error due to invalid date.
         assert response.status_code == 422, response.json()
+
 
 @pytest.mark.anyio
 class TestCurrencyBoundaryValues:
@@ -942,7 +942,7 @@ class TestCurrencyBoundaryValues:
             "category": "Food",
             "description": "Valid currency test",
             "account_name": "Checking",
-            "date": datetime.now().isoformat()
+            "date": datetime.now().isoformat(),
         }
         response = await async_client_auth.post("/expenses/", json=payload)
         assert response.status_code == 200, response.json()
@@ -957,7 +957,7 @@ class TestCurrencyBoundaryValues:
             "category": "Food",
             "description": "Invalid currency test",
             "account_name": "Checking",
-            "date": datetime.now().isoformat()
+            "date": datetime.now().isoformat(),
         }
         response = await async_client_auth.post("/expenses/", json=payload)
         assert response.status_code == 400, response.json()
