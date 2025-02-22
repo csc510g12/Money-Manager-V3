@@ -50,6 +50,7 @@ cancel - To cancel any operation
 TELEGRAM_GROUP_CHAT_COMMAND_TEXT = """
 menu - Display available commands
 bill_split - Split a bill with group members
+bill_split_status - Check the status of an ongoing bill split
 bill_split_proceed - Proceed with ongoing bill split
 cancel - Cancel the ongoing bill split
 """

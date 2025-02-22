@@ -28,6 +28,7 @@ from bots.telegram.group_bill_split import (
     bill_split_currency_selection_handler,
     bill_split_entry,
     bill_split_proceed_handler,
+    bill_split_status_handler,
     cancel_bill_split_handler,
     confirm_bill_split_callback_handler,
 )
@@ -102,6 +103,10 @@ async def group_chat_handler(
     # if is bill split proceed command
     elif "/bill_split_proceed" in text:
         await bill_split_proceed_handler(update, context)
+        return
+    # if is bill split proceed command
+    elif "/bill_split_status" in text:
+        await bill_split_status_handler(update, context)
         return
     # if is bill split command
     elif "/bill_split" in text:

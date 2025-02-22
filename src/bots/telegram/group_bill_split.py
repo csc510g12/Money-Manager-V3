@@ -1,11 +1,13 @@
+import re
 import threading
 from collections import namedtuple
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, NamedTuple, Union
 from uuid import uuid4
 
 import requests
 from loguru import logger
+from matplotlib.pylab import f
 from pytz import timezone as pytz_timezone
 from telegram import (
     InlineKeyboardButton,
@@ -16,7 +18,10 @@ from telegram.ext import ContextTypes
 
 from bots.telegram.auth import authenticate, get_user
 from bots.telegram.reply_handlers import ReplyWaiters
-from bots.telegram.utils import extract_mentioned_usernames
+from bots.telegram.utils import (
+    extract_mentioned_usernames,
+    wrap_text_for_markdown_v2,
+)
 from config.config import TELEGRAM_BOT_API_BASE_URL, TIME_ZONE
 
 API_TIMEOUT = 10  # seconds
@@ -46,13 +51,22 @@ class BillSplitTransaction:
         identifier (str): The unique identifier for the transaction.
     """
 
+    # class properties
+    TIMEOUT_THREADS = {str: threading.Timer}  # identifier: Timer
+
+    def __del__(self):
+        """Destructor to cancel the timeout thread if it exists."""
+        if self.identifier in self.__class__.TIMEOUT_THREADS:
+            self.__class__.TIMEOUT_THREADS[self.identifier].cancel()
+            del self.__class__.TIMEOUT_THREADS[self.identifier]
+
     def __init__(
         self,
         participants: Dict[str, Union[Dict, None]],
         issuer: ComplexUser = None,
-        amount: float = 0.0,
-        category="Bill Split",
-        currency="USD",
+        amount: float = None,
+        category=None,
+        currency=None,
         timestamp=datetime.now(pytz_timezone(TIME_ZONE)).strftime(
             "%Y-%m-%dT%H:%M:%S.%f"
         ),
@@ -87,6 +101,12 @@ class BillSplitTransaction:
             anchor_update  # Placeholder for the update object
         )
         self.identifier = str(uuid4())  # Unique identifier for the transaction
+
+        # start the timeout thread
+        self.__class__.TIMEOUT_THREADS[self.identifier] = threading.Timer(
+            TRANSACTION_TIMEOUT, self.__del__
+        )
+        self.__class__.TIMEOUT_THREADS[self.identifier].start()
 
     @property
     def json(self):
@@ -681,11 +701,68 @@ async def bill_split_proceed_handler(
         )
     except Exception as e:
         logger.error(f"Error while processing bill split: {e}")
+        reply_message = (
+            f"An error occurred while processing the bill split :"
+            + f"**{e}**\n"
+            + f"If you want to try again, please mention me with command /bill_split_proceed"
+        )
+        # replace all "." with "\\."
+        reply_message = re.sub(r"\.", r"\\.", reply_message)
+        await update.message.reply_text(reply_message, parse_mode="MarkdownV2")
+        return
+
+
+async def bill_split_status_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """Print the status of the bill split transaction.
+
+    Args:
+        update (Update): The update object.
+        context (ContextTypes.DEFAULT_TYPE): The context object.
+
+    Returns:
+        None
+
+    Behavior:
+        This will not check if the user is the issuer of the bill split.
+        It will print the status of the ongoing bill split transaction in this group chat.
+    """
+
+    group_id = update.message.chat_id
+
+    if group_id not in ONGOING_BILL_SPLIT_TRANSACTIONS:
         await update.message.reply_text(
-            f"An error occurred while processing the bill split : {e}\n"
-            + f"If you want to try again, please mention me with command \\/bill_split_proceed"
+            "No active bill split transaction in this group."
         )
         return
+
+    transaction = ONGOING_BILL_SPLIT_TRANSACTIONS[group_id]
+    reply_text = ""
+    reply_text += f"Transaction ID: `{transaction.identifier}`\n"
+    reply_text += f"💵 Amount: {transaction.amount or 'Unknown'} with currency {transaction.currency or 'Unknown'}\n"
+    reply_text += f"📌 Category: {transaction.category or 'Unknown'}\n"
+    reply_text += f"Created by @{transaction.issuer.tg_username} at `{transaction.timestamp}`\n"
+    # confirm states
+    reply_text += "\nConfirmation Status:\n"
+    for user, confirmed in transaction.confirmed_states.items():
+        reply_text += wrap_text_for_markdown_v2(
+            f"👤 @{user}: {'Confirmed ✅' if confirmed else 'Not Confirmed ❌'}\n"
+        )
+    # when will the transaction timeout, timeout time = transaction.timestamp + TRANSACTION_TIMEOUT
+    timeout_time = datetime.strptime(
+        transaction.timestamp, "%Y-%m-%dT%H:%M:%S.%f"
+    ) + timedelta(seconds=TRANSACTION_TIMEOUT)
+    seconds_to_timeout = (
+        timeout_time - datetime.now().replace(tzinfo=None)
+    ).total_seconds()
+    seconds_to_timeout = int(seconds_to_timeout)
+    reply_text += f"\nThis transaction will timeout within {seconds_to_timeout} seconds\n"
+    reply_text += wrap_text_for_markdown_v2(
+        "If you want to proceed with the bill split, please mention me with command /bill_split_proceed\n"
+    )
+    reply_text = re.sub(r"\.", r"\\.", reply_text)
+    await update.message.reply_text(reply_text, parse_mode="MarkdownV2")
 
 
 async def cancel_bill_split_handler(

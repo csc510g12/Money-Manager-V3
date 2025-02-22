@@ -125,3 +125,8 @@ class Singleton(type):
                 *args, **kwargs
             )
         return cls._instances[cls]
+
+
+def wrap_text_for_markdown_v2(text: str) -> str:
+    """Wrap text for Markdown V2 formatting."""
+    return re.sub(r"([_*\[\]()~`>#+\-=|{}.!])", r"\\\1", text)
