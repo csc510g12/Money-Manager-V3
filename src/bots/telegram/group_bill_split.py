@@ -701,13 +701,15 @@ async def bill_split_proceed_handler(
         )
     except Exception as e:
         logger.error(f"Error while processing bill split: {e}")
+        # reply with status
+        await bill_split_status_handler(update, context)
+        # reply with error message
         reply_message = (
             f"An error occurred while processing the bill split :"
             + f"**{e}**\n"
-            + f"If you want to try again, please mention me with command /bill_split_proceed"
+            + f"If you want to try again, please mention me with command /bill\_split\_proceed"
         )
-        # replace all "." with "\\."
-        reply_message = re.sub(r"\.", r"\\.", reply_message)
+
         await update.message.reply_text(reply_message, parse_mode="MarkdownV2")
         return
 
