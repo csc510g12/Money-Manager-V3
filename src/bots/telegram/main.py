@@ -34,6 +34,7 @@ from bots.telegram.group_bill_split import (
 )
 from bots.telegram.receipts import receipts_handlers  # New import
 from bots.telegram.reply_handlers import reply_handler
+from bots.telegram.transfers import transfer_conv_handler
 from bots.telegram.utils import (
     get_group_chat_menu_commands,
     get_private_chat_menu_commands,
@@ -174,6 +175,9 @@ def main() -> None:
         application.add_handler(handler)
     for handler in analytics_handlers:
         application.add_handler(handler)
+
+    # Transfer conversation handler
+    application.add_handler(transfer_conv_handler)
 
     # Catch unknown commands (only for private chat)
     application.add_handler(
