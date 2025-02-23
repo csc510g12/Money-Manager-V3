@@ -20,6 +20,7 @@ class DummyUpdate:
         self.message = DummyMessage(text)
         # Set effective_user to mimic Telegram's Update structure
         self.effective_user = self.message.from_user
+        self.effective_chat = self.message.chat  # Add effective_chat
 
 
 class DummyBot:
