@@ -1,4 +1,5 @@
 # test_expenses.py
+import asyncio
 from asyncio import get_event_loop
 from datetime import datetime
 

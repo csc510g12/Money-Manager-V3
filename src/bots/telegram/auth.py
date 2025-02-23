@@ -3,6 +3,7 @@
 from typing import Any, Optional
 
 import requests
+from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorClient
 from telegram import Update
 from telegram.ext import (
@@ -228,6 +229,7 @@ def authenticate(func):
     ):
         user_id = update.effective_user.id
         user = await telegram_collection.find_one({"telegram_id": user_id})
+        logger.debug(f"User: {user}")
         if user and user.get("token"):
             return await func(
                 update, context, token=user.get("token"), *args, **kwargs
