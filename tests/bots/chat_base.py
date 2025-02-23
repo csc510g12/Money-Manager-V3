@@ -10,7 +10,7 @@ class DummyMessage:
         )
         self.replied_text = None
 
-    async def reply_text(self, text):
+    async def reply_text(self, text, **kwargs):
         self.replied_text = text
         return text
 
