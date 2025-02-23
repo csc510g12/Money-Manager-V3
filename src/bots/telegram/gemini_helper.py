@@ -6,10 +6,10 @@ from datetime import datetime
 
 import google.generativeai as genai
 import PIL.Image
-from api_helper import APIHelper
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
+from bots.telegram.api_helper import APIHelper
 from config import config
 
 # Configure Gemini and logging
