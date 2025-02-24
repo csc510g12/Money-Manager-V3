@@ -705,11 +705,11 @@ async def bill_split_proceed_handler(
         await bill_split_status_handler(update, context)
         # reply with error message
         reply_message = (
-            f"An error occurred while processing the bill split :"
-            + f"**{e}**\n"
+            f"An error occurred while processing the bill split :\n"
+            + f"❌ **{e}**\n"
             + f"If you want to try again, please mention me with command /bill\_split\_proceed"
         )
-
+        reply_message = re.sub(r"\.", r"\\.", reply_message)
         await update.message.reply_text(reply_message, parse_mode="MarkdownV2")
         return
 
@@ -976,7 +976,7 @@ async def process_bill_split(
                 )
                 raise ValueError(
                     # f"Failed to create transaction for participant {tg_username}."
-                    "Failed to create transaction for some participants."  # for privacy reasons, do not show the participant
+                    f"Failed to create transaction for some participants: {error_detail}"  # for privacy reasons, do not show the participant
                 )  # todo should have rollback mechanism
 
         # finally, delete the transaction
