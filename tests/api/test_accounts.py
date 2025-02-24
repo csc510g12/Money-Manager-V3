@@ -417,3 +417,49 @@ class TestAccountEdgeCases:
         get_resp = await async_client_auth.get("/accounts/")
         account_ids = [acc["_id"] for acc in get_resp.json()["accounts"]]
         assert account_id not in account_ids
+
+@pytest.mark.anyio
+class TestTransfers:
+    async def test_account_transfers(
+            self, async_client_auth: AsyncClient
+    ):
+        """
+        Test that transfers between accounts are successful.
+        """
+
+        # Create accounts to transfer
+        create_account_one = await async_client_auth.post(
+            "/accounts/",
+            json={
+                "name": "Transfer_test1",
+                "balance": 1000.0,
+                "currency": "USD",
+            },
+        )
+
+        create_account_two = await async_client_auth.post(
+            "/accounts/",
+            json={
+                "name": "Transfer_test2",
+                "balance": 1000.0,
+                "currency": "USD",
+            },
+        )
+
+        response = await async_client_auth.post(
+            "/transfer/",
+            json={
+                "source_account": create_account_one,
+                "destination_account": create_account_two,
+                "amount": 500.0,
+            },
+        )
+
+        assert response.status_code == 200, response.json()
+
+        account_one_balance = create_account_one.json()["balance"]
+        account_two_balance = create_account_two.json()["balance"]
+
+        assert account_two_balance == account_one_balance - 500.0
+
+

@@ -20,7 +20,6 @@ from config.config import TELEGRAM_BOT_API_BASE_URL
     TRANSFER_CONFIRM,
 ) = range(4)
 
-
 @authenticate
 async def transfer_start(
     update: Update, context: ContextTypes.DEFAULT_TYPE, token: str
