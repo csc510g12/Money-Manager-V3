@@ -741,7 +741,9 @@ async def bill_split_status_handler(
 
     transaction = ONGOING_BILL_SPLIT_TRANSACTIONS[group_id]
     reply_text = ""
-    reply_text += f"Transaction ID: `{transaction.identifier}`\n"
+    reply_text += re.sub(
+        r"\-", r"\\-", f"Transaction ID: {transaction.identifier}\n"
+    )
     reply_text += f"💵 Amount: {transaction.amount or 'Unknown'} with currency {transaction.currency or 'Unknown'}\n"
     reply_text += f"📌 Category: {transaction.category or 'Unknown'}\n"
     reply_text += f"Created by @{transaction.issuer.tg_username} at `{transaction.timestamp}`\n"
