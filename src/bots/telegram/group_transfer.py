@@ -1,249 +1,513 @@
 import re
 import threading
 from collections import namedtuple
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import Dict, List, NamedTuple, Union
 from uuid import uuid4
 
 import requests
 from loguru import logger
+from matplotlib.pylab import f
 from pytz import timezone as pytz_timezone
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Update,
+)
 from telegram.ext import ContextTypes
+from telegram.helpers import escape_markdown
 
-from bots.telegram.auth import authenticate, get_user, get_user_by_username
+from bots.telegram.auth import authenticate, get_user
 from bots.telegram.reply_handlers import ReplyWaiters
-from bots.telegram.utils import extract_mentioned_usernames, wrap_text_for_markdown_v2
-from config.config import TELEGRAM_BOT_API_BASE_URL, TIME_ZONE
+from bots.telegram.utils import (
+    extract_mentioned_usernames,
+    wrap_text_for_markdown_v2,
+)
+from config.config import TELEGRAM_BOT_API_BASE_URL
 
-API_TIMEOUT = 60
+ONGOING_TRANSFER: Dict[int, "TransferTransaction"] = {}
 
-# Using the same ComplexUser tuple as in your private transfers
-ComplexUser = namedtuple("ComplexUser", ["tg_username", "mm_user"])
-
-# Global dictionary to track ongoing group transfer transactions per group chat
-ONGOING_GROUP_TRANSFER_TRANSACTIONS = {}
-
-# Timeout for each transaction (seconds)
+API_TIMEOUT = 10
 TRANSACTION_TIMEOUT = 600
 
-class GroupTransferTransaction:
+(
+    TRANSFER_SOURCE,
+    TRANSFER_DESTINATION,
+    TRANSFER_AMOUNT,
+    TRANSFER_CONFIRM,
+) = range(4)
+
+ComplexUser = namedtuple("ComplexUser", ["tg_username", "mm_user"])
+
+
+class TransferTransaction:
     """
-    Represents a group transfer transaction.
-    
+    Class to represent a transfer.
+
     Attributes:
-      sender: The user initiating the transfer.
-      recipients: Dictionary mapping each recipient's username to a dict holding their chosen account and confirmation status.
-      sender_account: The account chosen by the sender (source account).
-      amount: The transfer amount.
-      currency: The currency (default: USD).
-      timestamp: Transaction timestamp.
-      identifier: Unique transaction ID.
-      anchor_update: The original update that started the transaction.
     """
-    def __init__(self, sender: ComplexUser, recipients: list, anchor_update: Update):
-        self.sender = sender
-        self.recipients = {username: {"account": None, "confirmed": False} for username in recipients}
-        self.sender_account = None
-        self.amount = None
-        self.currency = "USD"
-        self.timestamp = datetime.now(pytz_timezone(TIME_ZONE)).strftime("%Y-%m-%dT%H:%M:%S.%f")
-        self.anchor_update = anchor_update
-        self.identifier = str(uuid4())
-        self.timeout_thread = threading.Timer(TRANSACTION_TIMEOUT, self.__del__)
-        self.timeout_thread.start()
+
+    TIMEOUT_THREADS = {str: threading.Timer}
 
     def __del__(self):
-        self.timeout_thread.cancel()
+        """Destructor to cancel transaction"""
+        if self.identifier in self.__class__.TIMEOUT_THREADS:
+            self.__class__.TIMEOUT_THREADS[self.identifier].cancel()
+            del self.__class__.TIMEOUT_THREADS[self.identifier]
+
+    def __init__(
+        self,
+        issuer: ComplexUser = None,
+        recipient: ComplexUser = None,
+        amount: float = None,
+        currency=None,
+        anchor_update=None,
+    ):
+        self.issuer = issuer
+        self.recipient = recipient
+        self.amount = amount
+        self.identifier = str(uuid4())
+        self.currency = currency
+        if isinstance(recipient, dict):
+            self.confirmed_states = {name: False for name in recipient.keys()}
+        elif isinstance(recipient, list):
+            self.confirmed_states = {name: False for name in recipient}
+        elif isinstance(recipient, ComplexUser):
+            self.confirmed_states = {recipient.tg_username: False}
+        self.anchor_update: Update = anchor_update
+
+        # start the timeout thread
+        self.__class__.TIMEOUT_THREADS[self.identifier] = threading.Timer(
+            TRANSACTION_TIMEOUT, self.__del__
+        )
+        self.__class__.TIMEOUT_THREADS[self.identifier].start()
 
     @property
-    def all_recipient_accounts_confirmed(self):
-        return all(info["account"] is not None for info in self.recipients.values())
+    def json(self):
+        return {
+            "id": self.identifier,
+            "amount": self.amount,
+            "issuer": self.issuer,
+            "recipient": self.recipient,
+        }
 
-# ---------------------------------------------------------------------
-# Step 1: Entry Point for Group Transfer
-# ---------------------------------------------------------------------
+
 @authenticate
-async def group_transfer_entry(update: Update, context: ContextTypes.DEFAULT_TYPE, token: str) -> None:
-    """
-    Initiates a group transfer. The sender must mention one or more recipients.
-    """
+async def group_transfer_entry(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, token: str
+) -> None:
+    """Entry point for the group transfer"""
+
     group_id = update.message.chat_id
-    if group_id in ONGOING_GROUP_TRANSFER_TRANSACTIONS:
-        await update.message.reply_text("A group transfer is already in progress. Please complete or cancel it first.")
+
+    if group_id in ONGOING_TRANSFER:
+        await update.message.reply_text(
+            "A transfer is already in progress in this group. Please complete or cancel it before starting a new one."
+        )
         return
 
-    mentioned_users = await extract_mentioned_usernames(update, context, keep_at_symbol=False)
-    mentioned_users = [user for user in mentioned_users if user != context.bot.username]
-    if not mentioned_users:
-        await update.message.reply_text("Please mention at least one recipient for the group transfer.")
-        return
-
-    sender_tg_id = update.effective_user.id
-    sender_tg_name = update.effective_user.username
-    sender = ComplexUser(
-        tg_username=sender_tg_name,
-        mm_user=await get_user(tg_user_id=sender_tg_id)
+    mentioned_users = await extract_mentioned_usernames(
+        update, context, keep_at_symbol=False
     )
-    transaction = GroupTransferTransaction(sender=sender, recipients=mentioned_users, anchor_update=update)
-    ONGOING_GROUP_TRANSFER_TRANSACTIONS[group_id] = transaction
+    mentioned_users = [
+        user for user in mentioned_users if user != f"{context.bot.username}"
+    ]
+
+    if not mentioned_users:
+        await update.message.reply_text(
+            "Please mention the user you want to begin a transfer with."
+        )
+        return
+
+    issuer_tg_id = update.effective_user.id
+    issuer_tg_name = update.effective_user.username
+
+    if len(mentioned_users) > 1:
+        await update.message.reply_text(
+            f"You can only transfer to one user at a time, but you specified {len(mentioned_users)} users."
+        )
+        return
+
+    transfer = TransferTransaction(
+        recipient=ComplexUser(tg_username=mentioned_users[0], mm_user=None),
+        issuer=ComplexUser(
+            tg_username=issuer_tg_name,
+            mm_user=await get_user(tg_user_id=issuer_tg_id),
+        ),
+        anchor_update=update,
+    )
+
+    ONGOING_TRANSFER[group_id] = transfer
+    await update.message.reply_text(
+        f"You will transfer to: @{', @'.join(mentioned_users)}"
+    )
+
+    amount_message = await update.message.reply_text(
+        "Please enter the amount to transfer by replying to this message."
+    )
+
+    context.chat_data["amount_message_id"] = amount_message.message_id
+    ReplyWaiters[
+        (group_id, amount_message.message_id)
+    ] = transfer_amount_handler
+    return
+
+
+async def transfer_amount_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """Handle the amount to be transferred between users"""
+
+    group_id = update.message.chat_id
+    if group_id not in ONGOING_TRANSFER:
+        await update.message.reply_text("No active transfer in this group.")
+        return
+
+    if (
+        update.message.from_user.id
+        != ONGOING_TRANSFER[group_id].issuer.mm_user["telegram_id"]
+    ):
+        await update.message.reply_text(
+            "You are not the owner of this transfer."
+        )
+        raise ValueError(
+            "User who replied to the message is not the owner of the transfer."
+        )
+
+    if (
+        update.message.reply_to_message
+        and update.message.reply_to_message.message_id
+        == context.chat_data.get("amount_message_id")
+    ):
+        amount_text = update.message.text
+        try:
+            amount = float(amount_text)
+        except ValueError as e:
+            await update.message.reply_text(
+                "Invalid amount. Please neter a valid number."
+            )
+            raise e
+
+    ONGOING_TRANSFER[group_id].amount = amount
+
+    await show_confirm_transaction(update, context)
+
+
+async def show_confirm_transaction(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """Displays a confirmation message for users in transfer to accept"""
+    chat_id = update.message.chat_id
 
     await update.message.reply_text(
-        f"Group transfer initiated by @{sender.tg_username} to: {', '.join(mentioned_users)}.\nPlease enter the transfer amount."
+        f"The amount to be transfer: {ONGOING_TRANSFER[chat_id].amount} {ONGOING_TRANSFER[chat_id].currency}. "
+        + "Please confirm the transfer."
     )
-    # Set a reply waiter for the amount input.
-    context.chat_data["group_transfer_amount_message_id"] = update.message.message_id
-    ReplyWaiters[(group_id, update.message.message_id)] = group_transfer_amount_handler
-
-# ---------------------------------------------------------------------
-# Step 2: Handle Amount Input
-# ---------------------------------------------------------------------
-async def group_transfer_amount_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Handles the transfer amount input from the sender.
-    """
-    group_id = update.message.chat_id
-    if group_id not in ONGOING_GROUP_TRANSFER_TRANSACTIONS:
-        await update.message.reply_text("No active group transfer transaction.")
+    mentioned_users = list(ONGOING_TRANSFER[chat_id].confirmed_states.keys())
+    if not mentioned_users:
+        await update.message.reply_text("No users mentioned for the transfer.")
         return
-    transaction = ONGOING_GROUP_TRANSFER_TRANSACTIONS[group_id]
-    try:
-        amount = float(update.message.text)
-    except ValueError:
-        await update.message.reply_text("Invalid amount. Please enter a valid number.")
-        return
-
-    transaction.amount = amount
-    await update.message.reply_text(f"Amount set to {transaction.amount} {transaction.currency}.\nNow, please choose your source account:")
-
-    # Prompt sender for source account selection.
     keyboard = [
         [
-            InlineKeyboardButton("Checking", callback_data="group_source_Checking"),
-            InlineKeyboardButton("Savings", callback_data="group_source_Savings")
+            InlineKeyboardButton(
+                f"Confirm - {user}", callback_data=f"confirm_transfer_{user}"
+            )
         ]
+        for user in mentioned_users
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Choose your source account:", reply_markup=reply_markup)
+    await update.message.reply_text(
+        "Each user please confirm the transfer.",
+        reply_markup=reply_markup,
+    )
 
-# ---------------------------------------------------------------------
-# Step 3: Handle Sender's Source Account Selection
-# ---------------------------------------------------------------------
-@authenticate
-async def group_transfer_source_account_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, token: str) -> None:
-    """
-    Handles the sender's source account choice via inline button.
-    """
+
+async def confirm_transfer_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """Handles the transfer confirmation"""
     query = update.callback_query
-    await query.answer()
     group_id = query.message.chat_id
-    if group_id not in ONGOING_GROUP_TRANSFER_TRANSACTIONS:
-        await query.message.reply_text("No active group transfer transaction.")
-        return
-    transaction = ONGOING_GROUP_TRANSFER_TRANSACTIONS[group_id]
-    # Callback data format: "group_source_<Account>"
-    account_choice = query.data.split("_", 2)[-1]
-    transaction.sender_account = account_choice
-    await query.edit_message_text(f"Your source account is set to {account_choice}.")
+    user = query.from_user
+    mentioned_username = query.data.split("_", 1)[1].removeprefix("transfer_")
 
-    # Now prompt each recipient to select their destination account.
-    for recipient in transaction.recipients.keys():
-        keyboard = [
-            [
-                InlineKeyboardButton("Checking", callback_data=f"group_dest_{recipient}_Checking"),
-                InlineKeyboardButton("Savings", callback_data=f"group_dest_{recipient}_Savings")
-            ]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.reply_text(f"@{recipient}, please select the account to receive funds:", reply_markup=reply_markup)
-
-# ---------------------------------------------------------------------
-# Step 4: Handle Recipient's Destination Account Selection
-# ---------------------------------------------------------------------
-@authenticate
-async def group_transfer_recipient_account_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, token: str) -> None:
-    """
-    Handles a recipient's destination account choice.
-    Expected callback data: "group_dest_<username>_<Account>"
-    """
-    query = update.callback_query
-    await query.answer()
-    group_id = query.message.chat_id
-    if group_id not in ONGOING_GROUP_TRANSFER_TRANSACTIONS:
-        await query.message.reply_text("No active group transfer transaction.")
+    if group_id not in ONGOING_TRANSFER:
+        await query.answer("No active transfer in this group.")
         return
-    transaction = ONGOING_GROUP_TRANSFER_TRANSACTIONS[group_id]
-    data_parts = query.data.split("_")
-    recipient_username = data_parts[2]
-    account_choice = data_parts[3]
-    if recipient_username not in transaction.recipients:
-        await query.answer("You are not a participant in this transfer.")
-        return
-    transaction.recipients[recipient_username]["account"] = account_choice
-    transaction.recipients[recipient_username]["confirmed"] = True
-    await query.edit_message_text(f"@{recipient_username}, you selected {account_choice} as your destination account.")
 
-    # If all recipients have chosen, send a final confirmation summary to the sender.
-    if transaction.all_recipient_accounts_confirmed:
-        recipient_details = "\n".join([f"@{user}: {info['account']}" for user, info in transaction.recipients.items()])
-        summary = (
-            f"Transfer Summary:\n"
-            f"Sender: @{transaction.sender.tg_username} (Account: {transaction.sender_account})\n"
-            f"Amount: {transaction.amount} {transaction.currency}\n"
-            f"Recipients:\n{recipient_details}\n\n"
-            "Do you confirm this group transfer?"
+    transfer = ONGOING_TRANSFER[group_id]
+
+    if user.username != mentioned_username:
+        await query.answer("You can only confirm yourself.")
+
+    if mentioned_username not in transfer.confirmed_states:
+        await query.answer("You are not part of this transfer.")
+
+    mmuser = await get_user(tg_user_id=user.id)
+    if not mmuser:
+        await query.answer(
+            "You need to be authenticated to confirm. Please send `/login` or `/signup` in private chat with the bot."
         )
-        keyboard = [
-            [
-                InlineKeyboardButton("Confirm Transfer", callback_data=f"group_confirm_{transaction.identifier}")
-            ]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.reply_text(summary, reply_markup=reply_markup)
+        return
 
-# ---------------------------------------------------------------------
-# Step 5: Final Confirmation and Processing
-# ---------------------------------------------------------------------
+    if mentioned_username != transfer.recipient.tg_username:
+        await query.answer("Only the recipient can confirm the transfer.")
+        return
+
+    transfer.confirmed_states[mentioned_username] = True
+
+    await query.answer(f"Confirmed: {mentioned_username}")
+
+    updated_keyboard = [
+        [
+            InlineKeyboardButton(
+                f"Confirm - {user}", callback_data=f"conrim_transfer_{user}"
+            )
+        ]
+        for user, confirmed in transfer.confirmed_states.items()
+        if not confirmed
+    ]
+
+    reply_markup = (
+        InlineKeyboardMarkup(updated_keyboard) if updated_keyboard else None
+    )
+
+    await query.edit_message_text(
+        f"{mentioned_username} has confirmed.",
+        reply_markup=reply_markup,
+    )
+
+    if all(transfer.confirmed_states.values()):
+        await query.message.reply_text("All users have confirmed.")
+        await transfer_handler(
+            update, context, check_status=False, group_id=group_id
+        )
+
+
 @authenticate
-async def group_transfer_confirm_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, token: str) -> None:
-    """
-    Handles the final confirmation for the group transfer and processes transfers for each recipient.
-    """
-    query = update.callback_query
-    await query.answer()
-    group_id = query.message.chat_id
-    if group_id not in ONGOING_GROUP_TRANSFER_TRANSACTIONS:
-        await query.message.reply_text("No active group transfer transaction.")
+async def transfer_handler(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    check_status: bool = True,
+    group_id=None,
+    token: str = None,
+) -> None:
+    """Handles the transfer process"""
+
+    group_id = group_id or update.message.chat_id
+
+    if group_id not in ONGOING_TRANSFER:
+        await update.message.reply_text("No active transfer in this group.")
         return
-    transaction = ONGOING_GROUP_TRANSFER_TRANSACTIONS[group_id]
-    if not transaction.sender_account or not transaction.all_recipient_accounts_confirmed:
-        await query.message.reply_text("Transfer is incomplete. Please ensure all account selections are made.")
-        return
+
+    transaction = ONGOING_TRANSFER[group_id]
+    update = update if check_status else transaction.anchor_update
+
+    if check_status:
+        if (
+            update.message.from_user.id
+            != ONGOING_TRANSFER[group_id].issuer.mm_user["telegram_id"]
+        ):
+            await update.message.reply_text(
+                "You are not the owner of this transfer."
+            )
+            return
 
     try:
-        sender_token = transaction.sender.mm_user["token"]
-        transfer_results = []
-        # Process a separate transfer for each recipient.
-        for recipient, details in transaction.recipients.items():
-            payload = {
-                "source_account": transaction.sender_account,
-                "destination_account": details["account"],
-                "amount": transaction.amount,  # Adjust if you want different amounts per recipient.
-            }
-            response = requests.post(
-                f"{TELEGRAM_BOT_API_BASE_URL}/transfers/",
-                json=payload,
-                headers={"token": sender_token},
+        await process_transfer(group_id, transaction)
+        assert (
+            group_id not in ONGOING_TRANSFER
+        ), "Transfer not deleted after processing"
+        await update.message.reply_text(
+            f"Transfer has been successfully processed.\n"
+            f"💵 Amount: {transaction.amount} {transaction.currency}\n"
+            f"To: @{transaction.recipient.tg_username}"
+        )
+    except Exception as e:
+        logger.error(f"Error while processing Transfer: {e}")
+        # reply with status
+        await transfer_status_handler(update, context, token)
+        # reply with error message
+        reply_message = f"An error occurred while processing the transfer :\n"
+        reply_message = re.sub(r"\.", r"\\.", reply_message)
+        await update.message.reply_text(reply_message, parse_mode="MarkdownV2")
+        return
+
+
+async def process_transfer(
+    group_id: int, transaction: TransferTransaction
+) -> None:
+    try:
+        # Ensure that all participants have confirmed.
+        assert all(
+            transaction.confirmed_states.values()
+        ), "Not all participants have confirmed"
+
+        # Make sure that each recipient's user data (with a proper _id) is present.
+        for (
+            recipient_username,
+            recipient_data,
+        ) in transaction.recipient.items():
+            if not recipient_data or "_id" not in recipient_data:
+                raise ValueError(
+                    f"Recipient @{recipient_username} has not properly confirmed the transfer."
+                )
+
+        tgusername2account: Dict[str, List[Dict]] = {}
+
+        for tg_username, participant in transaction.recipient.items():
+            headers = {"token": participant["token"]}
+            response = requests.get(
+                f"{TELEGRAM_BOT_API_BASE_URL}/accounts/",
+                headers=headers,
                 timeout=API_TIMEOUT,
             )
             if response.status_code == 200:
-                transfer_results.append(f"Transfer to @{recipient} successful.")
+                accounts_list = response.json().get("accounts", [])
+                if not accounts_list:
+                    raise ValueError(
+                        # f"Participant {participant} has no accounts."
+                        "Some participants have no accounts."  # for privacy reasons, do not show the participant
+                    )
+                # Check if any account has the target currency
+                if not any(
+                    account["currency"] == transaction.currency
+                    for account in accounts_list
+                ):
+                    raise ValueError(
+                        f"Participant {participant} has no account with currency {transaction.currency}."
+                    )
             else:
-                err = response.json().get("detail", "Unknown error")
-                transfer_results.append(f"Transfer to @{recipient} failed: {err}")
+                raise ValueError(
+                    # f"Failed to fetch accounts for participant {participant}."
+                    "Failed to fetch accounts for some participants."  # for privacy reasons, do not show the participant
+                )
+            # Store the accounts with the target currency
+            tgusername2account[tg_username] = [
+                account
+                for account in accounts_list
+                if account["currency"] == transaction.currency
+            ]
 
-        result_summary = "\n".join(transfer_results)
-        await query.message.reply_text(f"Group Transfer Results:\n{result_summary}")
-        del ONGOING_GROUP_TRANSFER_TRANSACTIONS[group_id]
+        # Check if all participants have enough balance in corresponding accounts
+        for tg_username, accounts in tgusername2account.items():
+            if all(
+                account["balance"] < transaction.amount for account in accounts
+            ):
+                logger.error(
+                    f"Participant tg user @{tg_username} does not have enough {transaction.currency} balance in their accounts."
+                )
+                raise ValueError(
+                    # f"Participant {tg_username} does not have enough balance in their accounts."
+                    f"Some participants do not have enough {transaction.currency} balance in their accounts."  # for privacy reasons, do not show the participant
+                )
+            else:
+                # only store the first account with enough balance
+                tgusername2account[tg_username] = [
+                    account
+                    for account in accounts
+                    if account["balance"] >= transaction.amount
+                ][0]
+                logger.debug(
+                    f"Using account {tgusername2account[tg_username]['name']} for participant tg user @{tg_username}."
+                )
+
+        issuer_token = transaction.issuer.mm_user["token"]
+
+        # For each recipient, process the transfer.
+        for (
+            recipient_username,
+            recipient_data,
+        ) in transaction.recipient.items():
+            payload = {
+                "source_account": "Checking",
+                "destination_account": tgusername2account[recipient_username][
+                    "name"
+                ],
+                "amount": transaction.amount,
+            }
+
+            response = requests.post(
+                f"{TELEGRAM_BOT_API_BASE_URL}/users/transfer-to-user",
+                headers={"token": issuer_token},
+                json=payload,
+                timeout=API_TIMEOUT,
+            )
+
+            if response.status_code != 200:
+                try:
+                    error_detail = response.json().get(
+                        "detail", "Unknown error"
+                    )
+                except Exception:
+                    error_detail = (
+                        response.text or "No error details provided."
+                    )
+                raise ValueError(
+                    f"Transfer failed for recipient @{recipient_username}: {error_detail}"
+                )
+
+        # Finally, remove the transaction.
+        del ONGOING_TRANSFER[group_id]
+
     except Exception as e:
-        logger.error(f"Error during group transfer: {e}")
-        await query.message.reply_text(f"An error occurred during the transfer: {str(e)}")
+        raise e
+
+
+async def transfer_status_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, token: str
+) -> None:
+    """Status of the transfer"""
+    group_id = update.message.chat_id
+
+    if group_id not in ONGOING_TRANSFER:
+        await update.message.reply_text(
+            "No active transfer transaction in this group."
+        )
+        return
+
+    transaction = ONGOING_TRANSFER[group_id]
+
+    reply_text = ""
+    reply_text += f"💵 Amount: {transaction.amount or 'Unknown'} with currency {transaction.currency or 'Unknown'}\n"
+    reply_text += f"Created by @{transaction.issuer.tg_username}`\n"
+    # confirm states
+    reply_text += "\nConfirmation Status:\n"
+    for user, confirmed in transaction.confirmed_states.items():
+        reply_text += wrap_text_for_markdown_v2(
+            f"👤 @{user}: {'Confirmed ✅' if confirmed else 'Not Confirmed ❌'}\n"
+        )
+
+    reply_text += wrap_text_for_markdown_v2(
+        "If you want to proceed with the transfer, please mention me with command /transfer_proceed \n"
+    )
+
+    reply_text = reply_text = re.sub(r"\.", r"\\.", reply_text)
+    await update.message.reply_text(reply_text, parse_mode="MarkdownV2")
+
+
+async def cancel_transfer_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """Cancel the transfer"""
+    group_id = update.message.chat_id
+
+    if group_id not in ONGOING_TRANSFER:
+        await update.message.reply_text("No active transfer in this group.")
+        return
+
+    if group_id in ONGOING_TRANSFER:
+        # check if the issuer of cancel command is the same user who initiated the bill split
+        if (
+            update.message.from_user.id
+            != ONGOING_TRANSFER[group_id].issuer.mm_user["telegram_id"]
+        ):
+            await update.message.reply_text(
+                "You are not the ownver of this transfer."
+            )
+            return
+
+        del ONGOING_TRANSFER[group_id]
+        await update.message.reply_text("Transfer process has been canceled.")
+    else:
+        await update.message.reply_text("No active transfers to cancel.")

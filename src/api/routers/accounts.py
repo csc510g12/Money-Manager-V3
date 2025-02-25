@@ -281,4 +281,3 @@ async def transfer_funds(transfer: TransferRequest, token: str = Header(None)):
         )
 
     return {"message": "Transfer successful"}
-
