@@ -20,15 +20,20 @@ from config.config import TELEGRAM_BOT_API_BASE_URL
     TRANSFER_CONFIRM,
 ) = range(4)
 
-
 @authenticate
 async def transfer_start(
     update: Update, context: ContextTypes.DEFAULT_TYPE, token: str
 ) -> int:
+    """
+    Starts the transfer command.
+    """
     headers = {"token": token}
+
+    # Get account information
     response = requests.get(
         f"{TELEGRAM_BOT_API_BASE_URL}/accounts/", headers=headers
     )
+    # Check that there are available accounts for transfer
     if response.status_code == 200:
         accounts = response.json().get("accounts", [])
         if not accounts:
@@ -36,6 +41,7 @@ async def transfer_start(
                 "No accounts available for transfer."
             )
             return ConversationHandler.END
+        # User input for which account to use
         keyboard = [
             [
                 InlineKeyboardButton(
@@ -58,6 +64,9 @@ async def transfer_start(
 async def select_source(
     update: Update, context: ContextTypes.DEFAULT_TYPE, token: str
 ) -> int:
+    """
+    Selecting destination account to send the transfer.
+    """
     query = update.callback_query
     await query.answer()
     source_account_id = query.data.split("_")[1]
@@ -98,9 +107,12 @@ async def select_source(
 
 
 @authenticate
-async def select_destination(
+async def transfer_amount(
     update: Update, context: ContextTypes.DEFAULT_TYPE, token: str
 ) -> int:
+    """
+    Amount to send to destination account.
+    """
     query = update.callback_query
     await query.answer()
     dest_account_id = query.data.split("_")[1]
@@ -110,9 +122,12 @@ async def select_destination(
 
 
 @authenticate
-async def enter_amount(
+async def confirm_transfer(
     update: Update, context: ContextTypes.DEFAULT_TYPE, token: str
 ) -> int:
+    """
+    Confirm transfer amount.
+    """
     try:
         amount = float(update.message.text)
         context.user_data["amount"] = amount
@@ -137,9 +152,12 @@ async def enter_amount(
 
 
 @authenticate
-async def confirm_transfer(
+async def send_confirmed_transfer(
     update: Update, context: ContextTypes.DEFAULT_TYPE, token: str
 ) -> int:
+    """
+    Send the payload of the transfer.
+    """
     query = update.callback_query
     await query.answer()
     if query.data == "confirm_yes":
@@ -164,7 +182,9 @@ async def confirm_transfer(
     context.user_data.clear()
     return ConversationHandler.END
 
-
+"""
+Handles the account transfer functions.
+"""
 transfer_conv_handler = ConversationHandler(
     entry_points=[CommandHandler("accounts_transfer", transfer_start)],
     states={
@@ -172,13 +192,13 @@ transfer_conv_handler = ConversationHandler(
             CallbackQueryHandler(select_source, pattern="^source_")
         ],
         TRANSFER_DESTINATION: [
-            CallbackQueryHandler(select_destination, pattern="^dest_")
+            CallbackQueryHandler(transfer_amount, pattern="^dest_")
         ],
         TRANSFER_AMOUNT: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND, enter_amount)
+            MessageHandler(filters.TEXT & ~filters.COMMAND, confirm_transfer)
         ],
         TRANSFER_CONFIRM: [
-            CallbackQueryHandler(confirm_transfer, pattern="^confirm_")
+            CallbackQueryHandler(send_confirmed_transfer, pattern="^confirm_")
         ],
     },
     fallbacks=[CommandHandler("cancel", private_chat_cancel)],

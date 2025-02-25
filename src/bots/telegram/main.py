@@ -32,6 +32,12 @@ from bots.telegram.group_bill_split import (
     cancel_bill_split_handler,
     confirm_bill_split_callback_handler,
 )
+from bots.telegram.group_transfer import (
+    cancel_transfer_handler,
+    confirm_transfer_handler,
+    group_transfer_entry,
+    transfer_currency_selection_handler,
+)
 from bots.telegram.receipts import receipts_handlers  # New import
 from bots.telegram.reply_handlers import reply_handler
 from bots.telegram.transfers import transfer_conv_handler
@@ -112,9 +118,15 @@ async def group_chat_handler(
     elif "/bill_split" in text:
         await bill_split_entry(update, context)
         return
+    elif "/transfer" in text:
+        await group_transfer_entry(update, context)
+        return
     # if is cancel command
-    elif "/cancel" in text:
+    elif "/cancel_bill_split" in text:
         await cancel_bill_split_handler(update, context)
+        return
+    elif "/cancel_transfer" in text:
+        await cancel_transfer_handler(update, context)
         return
     # if is unknown command
     else:
@@ -138,6 +150,10 @@ def main() -> None:
     application.add_handler(
         MessageHandler(filters.ChatType.GROUP, group_chat_handler)
     )
+
+    application.add_handler(
+        MessageHandler(filters.ChatType.GROUP, group_chat_handler)
+    )
     application.add_handler(
         CallbackQueryHandler(
             confirm_bill_split_callback_handler, pattern="^confirm_bill_split_"
@@ -153,6 +169,16 @@ def main() -> None:
         CallbackQueryHandler(
             bill_split_category_selection_handler,
             pattern="^category_bill_split_",
+        )
+    )
+    application.add_handler(
+        CallbackQueryHandler(
+            transfer_currency_selection_handler, pattern="^currency_transfer_"
+        )
+    )
+    application.add_handler(
+        CallbackQueryHandler(
+            confirm_transfer_handler, pattern="^confirm_transfer_"
         )
     )
 

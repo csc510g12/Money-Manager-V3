@@ -52,6 +52,8 @@ menu - Display available commands
 bill_split - Split a bill with group members
 bill_split_status - Check the status of an ongoing bill split
 bill_split_proceed - Proceed with ongoing bill split
+transfer - Transfer money to another group member
+cancel_transfer - Cancel the ongoing transfer
 cancel - Cancel the ongoing bill split
 """
 
