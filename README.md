@@ -2,8 +2,7 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
-- [Money Manager V3](#money-manager-v3)
-  - [Videos](#videos)
+- [Money Manager](#money-manager)
   - [👥 Functionality](#-functionality)
   - [👨‍💻 Developer Friendly](#%E2%80%8D-developer-friendly)
   - [🛠️ Installation and Dev](#-installation-and-dev)
@@ -14,7 +13,7 @@
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-# Money Manager V3
+# Money Manager
 
 <div align="center">
   <img src="docs/logo/logo.png" alt="Project Logo" width="300"/>
@@ -22,22 +21,16 @@
 </div>
 A REST API application for managing expenses. Build your own automation—be it a Telegram bot 🤖, Discord bot, or your own app 📱! Now includes WebAPI and a telegram bot.
 
-![license](https://img.shields.io/github/license/csc510g12/project2?style=plastic&)
-
-## Videos
-
-- [Introduction](./introduction.mp4) to money manager
-- New features: [group bill split](https://drive.google.com/file/d/1kgvNv_ekDZ5hjRgomfL_J4XW7XKjZTpV/view?usp=sharing), transfer, and [expense alert](https://drive.google.com/file/d/1t9CRmalohPEkfyeOEsWg1DJMbH-reKJt/view?usp=sharing)
+![license](https://img.shields.io/github/license/csc510g12/project2?style=plastic&) [![DOI](https://zenodo.org/badge/928521002.svg)](https://doi.org/10.5281/zenodo.14927596)
 
 ✅ Quality
 
-[![Pre-commit](https://github.com/csc510g12/project2/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/csc510g12/project2/actions/workflows/pre-commit.yml) [![Pytest](https://github.com/csc510g12/project2/actions/workflows/pytest.yml/badge.svg)](https://github.com/csc510g12/project2/actions/workflows/pytest.yml) [![codecov](https://codecov.io/gh/csc510g12/project2/graph/badge.svg?token=HxVOHc7Prp)](https://codecov.io/gh/csc510g12/project2)
-[![badge_total_tests](https://img.shields.io/badge/tests-188-blue?style=plastic&logo=pytest&logoColor=white)](https://github.com/csc510g12/project2/tree/main/tests) [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) [![Code style: pylint](https://img.shields.io/badge/code%20style-pylint-yellowgreen)](https://pylint.pycqa.org/)
+[![Pre-commit](https://github.com/csc510g12/project2/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/csc510g12/project2/actions/workflows/pre-commit.yml) [![Pytest](https://github.com/csc510g12/project2/actions/workflows/pytest.yml/badge.svg)](https://github.com/csc510g12/project2/actions/workflows/pytest.yml) [![codecov](https://codecov.io/gh/csc510g12/Money-Manager-V3/graph/badge.svg?token=HxVOHc7Prp)](https://codecov.io/gh/csc510g12/project2) [![badge_total_tests](https://img.shields.io/badge/tests-203-blue?style=plastic&logo=pytest&logoColor=white)](https://github.com/csc510g12/project2/tree/main/tests)
 
 
 Code coverage graph:
 
-![CodeCovGraph](https://codecov.io/gh/csc510g12/project2/graphs/icicle.svg?token=HxVOHc7Prp)
+![CodeCovGraph](https://codecov.io/gh/csc510g12/Money-Manager-V3/graphs/icicle.svg?token=HxVOHc7Prp)
 
 📊 Stats
 
@@ -96,4 +89,4 @@ Please note that we have a [Code of Conduct](CODE_OF_CONDUCT.md) that all contri
 
 ## 🔦 Support
 
-If you have any questions or need assistance, please feel free to reach out. You can contact us via email at `service @ gong . host` (remove spaces) or through our [GitHub Discussions](https://github.com/csc510g12/project2/discussions).
+If you have any questions or need assistance, please feel free to reach out. You can contact us via email at `mmv3 @ 550w . host` (remove spaces) or through our [GitHub Discussions](https://github.com/csc510g12/project2/discussions).
