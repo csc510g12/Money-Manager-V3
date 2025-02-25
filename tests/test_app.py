@@ -8,19 +8,15 @@ from fastapi.responses import RedirectResponse
 @pytest.mark.anyio
 async def test_shutdown_db_client():
     """Test that users.shutdown_db_client() is called during lifespan shutdown."""
-    # Create a mock for shutdown_db_client
     mock_shutdown = AsyncMock()
     
-    # Patch the specific function inside the users module that's already imported in app.py
     with patch('api.routers.users.shutdown_db_client', mock_shutdown):
         test_app = FastAPI()
         
-        # Use the lifespan context manager
         cm = lifespan(test_app)
         await cm.__aenter__()
         await cm.__aexit__(None, None, None)
         
-        # Verify the mock was called
         mock_shutdown.assert_called_once()
 
 
