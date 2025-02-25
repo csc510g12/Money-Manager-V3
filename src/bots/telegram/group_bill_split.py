@@ -376,9 +376,7 @@ async def bill_split_currency_selection_handler(
     selected_currency = query.data.removeprefix("currency_bill_split_")
     ONGOING_BILL_SPLIT_TRANSACTIONS[group_id].currency = selected_currency
 
-    await show_select_category(
-        update, context
-    )  # Show available categories to the user
+    await show_select_category(update, context)
 
 
 @authenticate
