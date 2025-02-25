@@ -419,47 +419,192 @@ class TestAccountEdgeCases:
         assert account_id not in account_ids
 
 @pytest.mark.anyio
-class TestTransfers:
-    async def test_account_transfers(
-            self, async_client_auth: AsyncClient
-    ):
+class TestAccountTransfer:
+    async def test_valid_transfer(self, async_client_auth: AsyncClient):
         """
-        Test that transfers between accounts are successful.
+        Test a valid transfer between two accounts.
         """
+        # Create source account with sufficient balance.
+        source_resp = await async_client_auth.post(
+            "/accounts/",
+            json={"name": "Source Account", "balance": 1000.0, "currency": "USD"},
+        )
+        assert source_resp.status_code == 200, f"Response: {source_resp.json()}"
+        source_id = source_resp.json()["account_id"]
 
-        # Create accounts to transfer
-        create_account_one = await async_client_auth.post(
+        # Create destination account.
+        dest_resp = await async_client_auth.post(
+            "/accounts/",
+            json={"name": "Destination Account", "balance": 500.0, "currency": "USD"},
+        )
+        assert dest_resp.status_code == 200, f"Response: {dest_resp.json()}"
+        dest_id = dest_resp.json()["account_id"]
+
+        # Transfer $200 from source to destination.
+        transfer_payload = {
+            "source_account": source_id,
+            "destination_account": dest_id,
+            "amount": 200.0
+        }
+        transfer_resp = await async_client_auth.post(
+            "/accounts/transfer", json=transfer_payload
+        )
+        assert transfer_resp.status_code == 200, f"Response: {transfer_resp.json()}"
+        assert transfer_resp.json()["message"] == "Transfer successful"
+
+        # Verify updated balances.
+        source_get = await async_client_auth.get(f"/accounts/{source_id}")
+        dest_get = await async_client_auth.get(f"/accounts/{dest_id}")
+        assert source_get.json()["account"]["balance"] == 800.0, f"Response: {source_get.json()}"
+        assert dest_get.json()["account"]["balance"] == 700.0, f"Response: {dest_get.json()}"
+
+    async def test_transfer_insufficient_funds(self, async_client_auth: AsyncClient):
+        """
+        Test transferring funds when the source account has insufficient funds.
+        """
+        # Create a source account with low balance.
+        source_resp = await async_client_auth.post(
+            "/accounts/",
+            json={"name": "Poor Source", "balance": 50.0, "currency": "USD"},
+        )
+        source_id = source_resp.json()["account_id"]
+
+        # Create a destination account.
+        dest_resp = await async_client_auth.post(
+            "/accounts/",
+            json={"name": "Destination", "balance": 500.0, "currency": "USD"},
+        )
+        dest_id = dest_resp.json()["account_id"]
+
+        # Attempt to transfer more than available.
+        transfer_payload = {
+            "source_account": source_id,
+            "destination_account": dest_id,
+            "amount": 100.0
+        }
+        transfer_resp = await async_client_auth.post(
+            "/accounts/transfer", json=transfer_payload
+        )
+        assert transfer_resp.status_code == 400, f"Response: {transfer_resp.json()}"
+        assert transfer_resp.json()["detail"] == "Insufficient funds in source account"
+
+    async def test_transfer_invalid_amount(self, async_client_auth: AsyncClient):
+        """
+        Test transferring with an invalid amount (zero and negative).
+        """
+        # Create valid accounts.
+        source_resp = await async_client_auth.post(
+            "/accounts/",
+            json={"name": "Valid Source", "balance": 1000.0, "currency": "USD"},
+        )
+        source_id = source_resp.json()["account_id"]
+
+        dest_resp = await async_client_auth.post(
+            "/accounts/",
+            json={"name": "Valid Destination", "balance": 500.0, "currency": "USD"},
+        )
+        dest_id = dest_resp.json()["account_id"]
+
+        # Attempt to transfer zero.
+        transfer_payload = {
+            "source_account": source_id,
+            "destination_account": dest_id,
+            "amount": 0.0
+        }
+        transfer_resp = await async_client_auth.post(
+            "/accounts/transfer", json=transfer_payload
+        )
+        assert transfer_resp.status_code == 400, f"Response: {transfer_resp.json()}"
+        assert transfer_resp.json()["detail"] == "Transfer amount must be positive"
+
+        # Attempt to transfer a negative amount.
+        transfer_payload["amount"] = -10.0
+        transfer_resp = await async_client_auth.post(
+            "/accounts/transfer", json=transfer_payload
+        )
+        assert transfer_resp.status_code == 400, f"Response: {transfer_resp.json()}"
+        assert transfer_resp.json()["detail"] == "Transfer amount must be positive"
+
+    async def test_transfer_nonexistent_source(self, async_client_auth: AsyncClient):
+        """
+        Test transferring when the source account does not exist.
+        """
+        # Create a destination account.
+        dest_resp = await async_client_auth.post(
+            "/accounts/",
+            json={"name": "Destination", "balance": 500.0, "currency": "USD"},
+        )
+        dest_id = dest_resp.json()["account_id"]
+
+        # Use a valid but non-existent source account ID.
+        fake_source_id = str(ObjectId())
+        transfer_payload = {
+            "source_account": fake_source_id,
+            "destination_account": dest_id,
+            "amount": 100.0
+        }
+        transfer_resp = await async_client_auth.post(
+            "/accounts/transfer", json=transfer_payload
+        )
+        assert transfer_resp.status_code == 404, f"Response: {transfer_resp.json()}"
+        assert transfer_resp.json()["detail"] == "Source account not found"
+
+    async def test_transfer_nonexistent_source(self, async_client_auth: AsyncClient):
+        """
+        Test transferring when the source account does not exist.
+        """
+        # Create a destination account with a unique name.
+        dest_resp = await async_client_auth.post(
             "/accounts/",
             json={
-                "name": "Transfer_test1",
-                "balance": 1000.0,
-                "currency": "USD",
+                "name": "Destination Nonexistent Source",
+                "balance": 500.0,
+                "currency": "USD"
             },
         )
+        dest_data = dest_resp.json()
+        assert "account_id" in dest_data, f"Response JSON: {dest_data}"
+        dest_id = dest_data["account_id"]
 
-        create_account_two = await async_client_auth.post(
+        # Use a valid but non-existent source account ID.
+        fake_source_id = str(ObjectId())
+        transfer_payload = {
+            "source_account": fake_source_id,
+            "destination_account": dest_id,
+            "amount": 100.0
+        }
+        transfer_resp = await async_client_auth.post(
+            "/accounts/transfer", json=transfer_payload
+        )
+        assert transfer_resp.status_code == 404, f"Response: {transfer_resp.json()}"
+        assert transfer_resp.json()["detail"] == "Source account not found"
+
+    async def test_transfer_nonexistent_destination(self, async_client_auth: AsyncClient):
+        """
+        Test transferring when the destination account does not exist.
+        """
+        # Create a source account with a unique name.
+        source_resp = await async_client_auth.post(
             "/accounts/",
             json={
-                "name": "Transfer_test2",
+                "name": "Source Nonexistent Destination",
                 "balance": 1000.0,
-                "currency": "USD",
+                "currency": "USD"
             },
         )
+        source_data = source_resp.json()
+        assert "account_id" in source_data, f"Response JSON: {source_data}"
+        source_id = source_data["account_id"]
 
-        response = await async_client_auth.post(
-            "/transfer/",
-            json={
-                "source_account": create_account_one,
-                "destination_account": create_account_two,
-                "amount": 500.0,
-            },
+        # Use a valid but non-existent destination account ID.
+        fake_dest_id = str(ObjectId())
+        transfer_payload = {
+            "source_account": source_id,
+            "destination_account": fake_dest_id,
+            "amount": 100.0
+        }
+        transfer_resp = await async_client_auth.post(
+            "/accounts/transfer", json=transfer_payload
         )
-
-        assert response.status_code == 200, response.json()
-
-        account_one_balance = create_account_one.json()["balance"]
-        account_two_balance = create_account_two.json()["balance"]
-
-        assert account_two_balance == account_one_balance - 500.0
-
-
+        assert transfer_resp.status_code == 404, f"Response: {transfer_resp.json()}"
+        assert transfer_resp.json()["detail"] == "Destination account not found"
