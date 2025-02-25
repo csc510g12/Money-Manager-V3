@@ -9,6 +9,7 @@
   - [👨‍💻 Screenshots of Functionalities](#%E2%80%8D-screenshots-of-functionalities)
   - [🤝 Contributing](#-contributing)
   - [📜 Code of Conduct](#-code-of-conduct)
+  - [🔦 Support](#-support)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -20,16 +21,16 @@
 </div>
 A REST API application for managing expenses. Build your own automation—be it a Telegram bot 🤖, Discord bot, or your own app 📱! Now includes WebAPI and a telegram bot.
 
-![license](https://img.shields.io/github/license/csc510g12/project2?style=plastic&)
+![license](https://img.shields.io/github/license/csc510g12/project2?style=plastic&) [![DOI](https://zenodo.org/badge/928521002.svg)](https://doi.org/10.5281/zenodo.14927596)
 
 ✅ Quality
 
-[![Pre-commit](https://github.com/csc510g12/project2/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/csc510g12/project2/actions/workflows/pre-commit.yml) [![Pytest](https://github.com/csc510g12/project2/actions/workflows/pytest.yml/badge.svg)](https://github.com/csc510g12/project2/actions/workflows/pytest.yml) [![codecov](https://codecov.io/gh/csc510g12/project2/graph/badge.svg?token=HxVOHc7Prp)](https://codecov.io/gh/csc510g12/project2) [![badge_total_tests](https://img.shields.io/badge/tests-162-blue?style=plastic&logo=pytest&logoColor=white)](https://github.com/csc510g12/project2/tree/main/tests)
+[![Pre-commit](https://github.com/csc510g12/project2/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/csc510g12/project2/actions/workflows/pre-commit.yml) [![Pytest](https://github.com/csc510g12/project2/actions/workflows/pytest.yml/badge.svg)](https://github.com/csc510g12/project2/actions/workflows/pytest.yml) [![codecov](https://codecov.io/gh/csc510g12/Money-Manager-V3/graph/badge.svg?token=HxVOHc7Prp)](https://codecov.io/gh/csc510g12/project2) [![badge_total_tests](https://img.shields.io/badge/tests-203-blue?style=plastic&logo=pytest&logoColor=white)](https://github.com/csc510g12/project2/tree/main/tests)
 
 
 Code coverage graph:
 
-![CodeCovGraph](https://codecov.io/gh/csc510g12/project2/graphs/icicle.svg?token=HxVOHc7Prp)
+![CodeCovGraph](https://codecov.io/gh/csc510g12/Money-Manager-V3/graphs/icicle.svg?token=HxVOHc7Prp)
 
 📊 Stats
 
@@ -74,7 +75,9 @@ Refer to [INSTALL](INSTALL.md) for the guidance and follow the steps.
 | **Add Categories**     | <img src="https://github.com/user-attachments/assets/ca18b4a7-bbfc-4b79-8c31-aad577fa15bf" alt="Categories" width="200"></br> | **View Categories**   | <img src="https://github.com/user-attachments/assets/1273770e-83f2-4c0f-9109-58cdb3c4f987" alt="Categories" width="200"></br> | **Update Categories**   | <img src="https://github.com/user-attachments/assets/73d693fc-8967-4bf6-9052-1b3018cdfc64" alt="Categories" width="200"></br> |
 | **Delete Categories**  | <img src="https://github.com/user-attachments/assets/7a4feab0-d8d5-49be-97ce-d291cbc12fb0" alt="Categories" width="200"></br> | **Add Accounts**      | <img src="https://github.com/user-attachments/assets/c6bdb2d8-0bd3-45f6-b237-be0dd4b2e8f8" alt="Accounts" width="200"></br>   | **View Accounts**       | <img src="https://github.com/user-attachments/assets/f86b08cb-aae0-4e1c-9076-67274587f288" alt="Accounts" width="200"></br>   |
 | **Update Accounts**    | <img src="https://github.com/user-attachments/assets/294f0b80-7883-4c93-9967-c37a16a4cddf" alt="Accounts" width="200"></br>   | **Delete Accounts**   | <img src="https://github.com/user-attachments/assets/18870a19-eb0e-4cdd-84ff-cbd1b4cccfab" alt="Accounts" width="200"></br>   | **Analytics**           | <img src="https://github.com/user-attachments/assets/c30c1c10-b4c5-4947-affe-88a59f608839" alt="Analytics" width="200"></br>  |
-| **Export Range**       | <img src="https://github.com/user-attachments/assets/e80f74ce-9417-4403-8c4a-fc1d3c3338b8" alt="Exports" width="200"></br>    | **Export Format**     | <img src="https://github.com/user-attachments/assets/35f20478-429e-4100-b163-558ab11e91f0" alt="Exports" width="200"></br>    | **Group Bill Split**              | <img src="https://github.com/user-attachments/assets/e02ffaa4-6e7d-4501-9656-80d1cc435ea6" alt="Cancel" width="200"></br>     |
+| **Export Range**       | <img src="https://github.com/user-attachments/assets/e80f74ce-9417-4403-8c4a-fc1d3c3338b8" alt="Exports" width="200"></br>    | **Export Format**     | <img src="https://github.com/user-attachments/assets/35f20478-429e-4100-b163-558ab11e91f0" alt="Exports" width="200"></br>    |**Group Level Commands** | <img src="https://github.com/user-attachments/assets/c0f189f9-c0b0-4716-9bea-0072545a7423" alt="Group Level Commands" width="200"></br> |
+| **Issue Group Bill Split**              | <img src="https://github.com/user-attachments/assets/e02ffaa4-6e7d-4501-9656-80d1cc435ea6" alt="Cancel" width="200"></br> | **Group Level transaction Status** | <img src="https://github.com/user-attachments/assets/b02f10d8-de27-4fe5-a202-7e1858b3befb" alt="Group Level transaction Status" width="200"></br> | **Group Transfer** | <img src="https://github.com/user-attachments/assets/47403736-4330-4da3-a004-3aac3c63f21a" alt="Transfer" width="200"></br> |
+| **Cancel Group Level Transaction** | <img src="https://github.com/user-attachments/assets/0d974e6a-e5d5-4881-9b4c-34ed2ef38e31" alt="Cancel" width="200"></br> | **Budget Alert** | <img src="https://github.com/user-attachments/assets/d8f7b514-512c-464a-bc80-551c897a623c" alt="Budget Alert" width="200"></br> | **Transfer Between Accounts** | <img src="https://github.com/user-attachments/assets/bec18a00-f19d-4e05-b5ee-b9df85f28dfb" alt="Transfer Between Accounts" width="200"></br> |
 
 ## 🤝 Contributing
 
@@ -83,3 +86,7 @@ Thank you for your interest in contributing to MoneyManager! Your contributions 
 ## 📜 Code of Conduct
 
 Please note that we have a [Code of Conduct](CODE_OF_CONDUCT.md) that all contributors are expected to uphold. This ensures that our community remains welcoming and inclusive for everyone.
+
+## 🔦 Support
+
+If you have any questions or need assistance, please feel free to reach out. You can contact us via email at `mmv3 @ 550w . host` (remove spaces) or through our [GitHub Discussions](https://github.com/csc510g12/project2/discussions).
