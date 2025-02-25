@@ -68,6 +68,7 @@ class TransferTransaction:
         self.amount = amount
         self.identifier = str(uuid4())
         self.currency = currency
+        self.category = "Transfer"
         if isinstance(recipient, dict):
             self.confirmed_states = {name: False for name in recipient.keys()}
         elif isinstance(recipient, list):
@@ -190,6 +191,114 @@ async def transfer_amount_handler(
 
     ONGOING_TRANSFER[group_id].amount = amount
 
+    await show_select_currency(
+        update, context
+    )  # Show available currencies to the user
+
+
+@authenticate
+async def show_select_currency(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, token: str
+) -> None:
+    """Show the available currencies to the user for the transfer.
+
+    Args:
+        update (Update): The update object.
+        context (ContextTypes.DEFAULT_TYPE): The context object.
+        token (str): The user token.
+
+    Returns:
+        None
+
+    Behavior:
+        1. Check if the user is the issuer of the transfer.
+        2. Fetch the available currencies from the API.
+        3. Show the available currencies to the user.
+    """
+
+    # check if the user is the issuer of the transfer
+    group_id = update.message.chat_id
+    if group_id not in ONGOING_TRANSFER:
+        await update.message.reply_text(
+            "No active transfer transaction in this group."
+        )
+        return
+    if (
+        update.message.from_user.id
+        != ONGOING_TRANSFER[group_id].issuer.mm_user["telegram_id"]
+    ):
+        await update.message.reply_text(
+            "You are not the issuer of this transfer."
+        )
+        return
+
+    headers = {"token": token}
+    response = requests.get(
+        f"{TELEGRAM_BOT_API_BASE_URL}/users/",
+        headers=headers,
+        timeout=API_TIMEOUT,
+    )
+    if response.status_code == 200:
+        currencies = response.json().get("currencies", [])
+        if not currencies:
+            await update.callback_query.message.edit_text(
+                "No currencies found."
+            )
+            return
+
+    # Show available currencies to the user
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                currency, callback_data=f"currency_transfer_{currency}"
+            )
+        ]
+        for currency in currencies
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        "Please select the currency for the transfer from the list below:",
+        reply_markup=reply_markup,
+    )
+
+
+async def transfer_currency_selection_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """Handle currency selection for transfer.
+
+    Args:
+        update (Update): The update object.
+        context (ContextTypes.DEFAULT_TYPE): The context object.
+
+    Returns:
+        None
+
+    Behavior:
+        1. Check if the user is the issuer of the transfer.
+        2. Extract the selected currency.
+        3. Store the selected currency in the transfer transaction.
+        4. Ask for the category to be used for the transaction.
+        5. Wait for the user response before proceeding.
+    """
+    query = update.callback_query
+    group_id = query.message.chat_id
+
+    if group_id not in ONGOING_TRANSFER:
+        await query.answer("No active transfer transaction in this group.")
+        return
+
+    # check if the user is the issuer of the transfer
+    if (
+        query.from_user.id
+        != ONGOING_TRANSFER[group_id].issuer.mm_user["telegram_id"]
+    ):
+        await query.answer("You are not the issuer of this transfer.")
+        return
+
+    selected_currency = query.data.removeprefix("currency_transfer_")
+    ONGOING_TRANSFER[group_id].currency = selected_currency
+
     await show_confirm_transaction(update, context)
 
 
@@ -197,15 +306,18 @@ async def show_confirm_transaction(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
     """Displays a confirmation message for users in transfer to accept"""
-    chat_id = update.message.chat_id
 
-    await update.message.reply_text(
+    chat_id = update.callback_query.message.chat_id
+
+    await update.callback_query.message.reply_text(
         f"The amount to be transfer: {ONGOING_TRANSFER[chat_id].amount} {ONGOING_TRANSFER[chat_id].currency}. "
         + "Please confirm the transfer."
     )
     mentioned_users = list(ONGOING_TRANSFER[chat_id].confirmed_states.keys())
     if not mentioned_users:
-        await update.message.reply_text("No users mentioned for the transfer.")
+        await update.callback_query.message.reply_text(
+            "No users mentioned for the transfer."
+        )
         return
     keyboard = [
         [
@@ -216,7 +328,7 @@ async def show_confirm_transaction(
         for user in mentioned_users
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(
+    await update.callback_query.message.reply_text(
         "Each user please confirm the transfer.",
         reply_markup=reply_markup,
     )
@@ -255,6 +367,9 @@ async def confirm_transfer_handler(
         return
 
     transfer.confirmed_states[mentioned_username] = True
+    transfer.recipient = ComplexUser(
+        tg_username=mentioned_username, mm_user=mmuser
+    )
 
     await query.answer(f"Confirmed: {mentioned_username}")
 
@@ -278,7 +393,6 @@ async def confirm_transfer_handler(
     )
 
     if all(transfer.confirmed_states.values()):
-        await query.message.reply_text("All users have confirmed.")
         await transfer_handler(
             update, context, check_status=False, group_id=group_id
         )
@@ -343,20 +457,16 @@ async def process_transfer(
             transaction.confirmed_states.values()
         ), "Not all participants have confirmed"
 
-        # Make sure that each recipient's user data (with a proper _id) is present.
-        for (
-            recipient_username,
-            recipient_data,
-        ) in transaction.recipient.items():
-            if not recipient_data or "_id" not in recipient_data:
-                raise ValueError(
-                    f"Recipient @{recipient_username} has not properly confirmed the transfer."
-                )
+        recipient_tg_username, recipient_data = transaction.recipient
+        print(recipient_tg_username, recipient_data)
+        issuer_tg_username, issuer_data = transaction.issuer
+        if not recipient_data or "_id" not in recipient_data:
+            raise ValueError(
+                f"Recipient @{recipient_tg_username} has not properly confirmed the transfer."
+            )
 
-        tgusername2account: Dict[str, List[Dict]] = {}
-
-        for tg_username, participant in transaction.recipient.items():
-            headers = {"token": participant["token"]}
+        def get_accounts_with_currency(transaction, recipient_data):
+            headers = {"token": recipient_data["token"]}
             response = requests.get(
                 f"{TELEGRAM_BOT_API_BASE_URL}/accounts/",
                 headers=headers,
@@ -375,27 +485,33 @@ async def process_transfer(
                     for account in accounts_list
                 ):
                     raise ValueError(
-                        f"Participant {participant} has no account with currency {transaction.currency}."
+                        f"Some participant has no account with currency {transaction.currency}."
                     )
             else:
                 raise ValueError(
-                    # f"Failed to fetch accounts for participant {participant}."
                     "Failed to fetch accounts for some participants."  # for privacy reasons, do not show the participant
                 )
-            # Store the accounts with the target currency
-            tgusername2account[tg_username] = [
+            # Return the accounts with the target currency
+            return [
                 account
                 for account in accounts_list
                 if account["currency"] == transaction.currency
             ]
 
+        # Get the accounts of the recipient
+        recipient_accounts = get_accounts_with_currency(
+            transaction, recipient_data
+        )
+        # Get the accounts of the issuer
+        issuer_accounts = get_accounts_with_currency(transaction, issuer_data)
+
         # Check if all participants have enough balance in corresponding accounts
-        for tg_username, accounts in tgusername2account.items():
+        def get_accounts_with_enough_balance(accounts):
             if all(
                 account["balance"] < transaction.amount for account in accounts
             ):
                 logger.error(
-                    f"Participant tg user @{tg_username} does not have enough {transaction.currency} balance in their accounts."
+                    f"Participant tg user @{recipient_tg_username} does not have enough {transaction.currency} balance in their accounts."
                 )
                 raise ValueError(
                     # f"Participant {tg_username} does not have enough balance in their accounts."
@@ -403,49 +519,54 @@ async def process_transfer(
                 )
             else:
                 # only store the first account with enough balance
-                tgusername2account[tg_username] = [
+                account_with_enough_balance = [
                     account
                     for account in accounts
                     if account["balance"] >= transaction.amount
                 ][0]
                 logger.debug(
-                    f"Using account {tgusername2account[tg_username]['name']} for participant tg user @{tg_username}."
+                    f"Using account {account_with_enough_balance} for participant tg user @{recipient_tg_username}."
                 )
+                return account_with_enough_balance
 
-        issuer_token = transaction.issuer.mm_user["token"]
+        recipient_account = recipient_accounts[0]  # only one account
+        issuer_account = get_accounts_with_enough_balance(issuer_accounts)
 
-        # For each recipient, process the transfer.
-        for (
-            recipient_username,
-            recipient_data,
-        ) in transaction.recipient.items():
-            payload = {
-                "source_account": "Checking",
-                "destination_account": tgusername2account[recipient_username][
-                    "name"
-                ],
-                "amount": transaction.amount,
-            }
-
-            response = requests.post(
-                f"{TELEGRAM_BOT_API_BASE_URL}/users/transfer-to-user",
-                headers={"token": issuer_token},
-                json=payload,
+        # Perform the transfer, reduce the balance of the issuer and increase the balance of the recipient
+        try:
+            # get old balance of the issuer
+            old_balance = issuer_account["balance"]
+            # update the balance of the issuer
+            headers = {"token": issuer_data["token"]}
+            response = requests.put(
+                f"{TELEGRAM_BOT_API_BASE_URL}/accounts/{issuer_account['_id']}",
+                json={"balance": str(old_balance - transaction.amount)},
+                headers=headers,
                 timeout=API_TIMEOUT,
             )
-
             if response.status_code != 200:
-                try:
-                    error_detail = response.json().get(
-                        "detail", "Unknown error"
-                    )
-                except Exception:
-                    error_detail = (
-                        response.text or "No error details provided."
-                    )
                 raise ValueError(
-                    f"Transfer failed for recipient @{recipient_username}: {error_detail}"
+                    # f"Failed to update balance of issuer @{issuer_tg_username}."
+                    "Failed to update balance of some participants."  # for privacy reasons, do not show the participant
                 )
+
+            # get old balance of the recipient
+            old_balance = recipient_account["balance"]
+            # update the balance of the recipient
+            headers = {"token": recipient_data["token"]}
+            response = requests.put(
+                f"{TELEGRAM_BOT_API_BASE_URL}/accounts/{recipient_account['_id']}",
+                json={"balance": str(old_balance + transaction.amount)},
+                headers=headers,
+                timeout=API_TIMEOUT,
+            )
+            if response.status_code != 200:
+                raise ValueError(
+                    # f"Failed to update balance of recipient @{recipient_tg_username}."
+                    "Failed to update balance of some participants."  # for privacy reasons, do not show the participant
+                )
+        except Exception as e:
+            raise e
 
         # Finally, remove the transaction.
         del ONGOING_TRANSFER[group_id]
@@ -497,7 +618,7 @@ async def cancel_transfer_handler(
         return
 
     if group_id in ONGOING_TRANSFER:
-        # check if the issuer of cancel command is the same user who initiated the bill split
+        # check if the issuer of cancel command is the same user who initiated the transfer
         if (
             update.message.from_user.id
             != ONGOING_TRANSFER[group_id].issuer.mm_user["telegram_id"]

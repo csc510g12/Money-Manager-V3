@@ -36,6 +36,7 @@ from bots.telegram.group_transfer import (
     cancel_transfer_handler,
     confirm_transfer_handler,
     group_transfer_entry,
+    transfer_currency_selection_handler,
 )
 from bots.telegram.receipts import receipts_handlers  # New import
 from bots.telegram.reply_handlers import reply_handler
@@ -168,6 +169,11 @@ def main() -> None:
         CallbackQueryHandler(
             bill_split_category_selection_handler,
             pattern="^category_bill_split_",
+        )
+    )
+    application.add_handler(
+        CallbackQueryHandler(
+            transfer_currency_selection_handler, pattern="^currency_transfer_"
         )
     )
     application.add_handler(
