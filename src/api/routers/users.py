@@ -51,12 +51,14 @@ def format_id(document):
     document["_id"] = str(document["_id"])
     return document
 
+
 class TransferRequest(BaseModel):
     """Schema for updating transfer request"""
 
     source_account: str
     destination_account: str
     amount: float
+
 
 def create_access_token(data: dict, expires_delta: datetime.timedelta):
     """Create an access token with an expiration time."""
@@ -356,10 +358,14 @@ async def delete_token(token_id: str, token: str = Header(None)):
 
     raise HTTPException(status_code=404, detail="Token not found")
 
+
 @router.post("/transfer-to-user")
-async def transfer_to_user(transfer: TransferRequest, token: str = Header(None)):
+async def transfer_to_user(
+    transfer: TransferRequest, token: str = Header(None)
+):
     """
-    Transfer funds from the authenticated user's checking account to another user's checking account.
+    Transfer funds from the authenticated user's checking
+    account to another user's checking account.
 
     Args:
         transfer (TransferRequest): Contains destination_user_id and amount.
@@ -371,32 +377,50 @@ async def transfer_to_user(transfer: TransferRequest, token: str = Header(None))
     user_id = await verify_token(token)
 
     if transfer.amount <= 0:
-        raise HTTPException(status_code=400, detail="Transfer amount must be positive")
+        raise HTTPException(
+            status_code=400, detail="Transfer amount must be positive"
+        )
 
     # Source account - Checking account of the sender
-    source = await accounts_collection.find_one({"user_id": user_id, "name": "Checking"})
+    source = await accounts_collection.find_one(
+        {"user_id": user_id, "name": "Checking"}
+    )
     if not source:
         raise HTTPException(status_code=404, detail="Source account not found")
 
     if source["balance"] < transfer.amount:
-        raise HTTPException(status_code=400, detail="Insufficient funds in source account")
+        raise HTTPException(
+            status_code=400, detail="Insufficient funds in source account"
+        )
 
     # Destination account - Checking account of the recipient
-    recipient_user = await users_collection.find_one({"_id": ObjectId(transfer.destination_account)})
+    recipient_user = await users_collection.find_one(
+        {"_id": ObjectId(transfer.destination_account)}
+    )
     if not recipient_user:
         raise HTTPException(status_code=404, detail="Recipient user not found")
 
-    destination = await accounts_collection.find_one({"user_id": str(recipient_user["_id"]), "name": "Checking"})
+    destination = await accounts_collection.find_one(
+        {"user_id": str(recipient_user["_id"]), "name": "Checking"}
+    )
     if not destination:
-        raise HTTPException(status_code=404, detail="Recipient checking account not found")
+        raise HTTPException(
+            status_code=404, detail="Recipient checking account not found"
+        )
 
     # Perform the transfer
     async with await client.start_session() as session:
         async with session.start_transaction():
-            await accounts_collection.update_one({"_id": source["_id"]}, {"$inc": {"balance": -transfer.amount}})
-            await accounts_collection.update_one({"_id": destination["_id"]}, {"$inc": {"balance": transfer.amount}})
+            await accounts_collection.update_one(
+                {"_id": source["_id"]}, {"$inc": {"balance": -transfer.amount}}
+            )
+            await accounts_collection.update_one(
+                {"_id": destination["_id"]},
+                {"$inc": {"balance": transfer.amount}},
+            )
 
     return {"message": "Transfer successful"}
+
 
 @router.on_event("shutdown")
 async def shutdown_db_client():
