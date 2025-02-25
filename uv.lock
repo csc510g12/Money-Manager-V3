@@ -1275,7 +1275,7 @@ wheels = [
 ]
 
 [[package]]
-name = "moneymanagerv2"
+name = "moneymanagerv3"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
