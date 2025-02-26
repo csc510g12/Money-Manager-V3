@@ -23,6 +23,11 @@ A REST API application for managing expenses. Build your own automation—be it 
 
 ![license](https://img.shields.io/github/license/csc510g12/project2?style=plastic&) [![DOI](https://zenodo.org/badge/928521002.svg)](https://doi.org/10.5281/zenodo.14927596)
 
+📽️ Introducing Money Manager
+
+- [Introduction animation](./introduction.mp4)
+- [New features in V3](https://drive.google.com/file/d/1nqmDwzc6p4Lfe2XhXx-rge31Epu6TpOF/view?usp=sharing)
+
 ✅ Quality
 
 [![Pre-commit](https://github.com/csc510g12/project2/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/csc510g12/project2/actions/workflows/pre-commit.yml) [![Pytest](https://github.com/csc510g12/project2/actions/workflows/pytest.yml/badge.svg)](https://github.com/csc510g12/project2/actions/workflows/pytest.yml) [![codecov](https://codecov.io/gh/csc510g12/Money-Manager-V3/graph/badge.svg?token=HxVOHc7Prp)](https://codecov.io/gh/csc510g12/project2) [![badge_total_tests](https://img.shields.io/badge/tests-203-blue?style=plastic&logo=pytest&logoColor=white)](https://github.com/csc510g12/project2/tree/main/tests)
