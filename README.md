@@ -79,6 +79,15 @@ Refer to [INSTALL](INSTALL.md) for the guidance and follow the steps.
 | **Issue Group Bill Split**              | <img src="https://github.com/user-attachments/assets/e02ffaa4-6e7d-4501-9656-80d1cc435ea6" alt="Cancel" width="200"></br> | **Group Level transaction Status** | <img src="https://github.com/user-attachments/assets/b02f10d8-de27-4fe5-a202-7e1858b3befb" alt="Group Level transaction Status" width="200"></br> | **Group Transfer** | <img src="https://github.com/user-attachments/assets/47403736-4330-4da3-a004-3aac3c63f21a" alt="Transfer" width="200"></br> |
 | **Cancel Group Level Transaction** | <img src="https://github.com/user-attachments/assets/0d974e6a-e5d5-4881-9b4c-34ed2ef38e31" alt="Cancel" width="200"></br> | **Budget Alert** | <img src="https://github.com/user-attachments/assets/d8f7b514-512c-464a-bc80-551c897a623c" alt="Budget Alert" width="200"></br> | **Transfer Between Accounts** | <img src="https://github.com/user-attachments/assets/bec18a00-f19d-4e05-b5ee-b9df85f28dfb" alt="Transfer Between Accounts" width="200"></br> |
 
+## 🔮 Future Features
+
+- **Transaction Roll Back**: Allow users to roll back transactions incase of misinputs.
+- **Shared Group Account**: Allow users in a group to create a shared bank account and keep track of group funds.
+- **Recurring Expenses**: Allow users to set up recurring expenses.
+- **Expense Remdiners**: Will notify users of upcoming payments and deadlines.
+- **Reports**: Generate customized reports about spending habits.
+- **AI-driven Insights**: Use AI to analyze spending reports and generate personalized tips.
+
 ## 🤝 Contributing
 
 Thank you for your interest in contributing to MoneyManager! Your contributions are greatly appreciated, and this guide will help you get started. For full details on contributing, please refer to the [CONTRIBUTING.md](CONTRIBUTING.md) file, which provides comprehensive instructions and guidelines.
