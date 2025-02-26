@@ -7,6 +7,19 @@ from httpx import AsyncClient
 
 from api.app import app
 
+@pytest.fixture
+def mock_db_user_no_categories(monkeypatch):
+    class MockCollection:
+        async def find_one(self, query):
+            return {"_id": ObjectId("507f1f77bcf86cd799439011"), "username": "testuser"}
+        
+        async def update_one(self, filter_query, update_query):
+            return {"modified_count": 1}
+
+    monkeypatch.setattr(
+        "api.routers.categories.users_collection", MockCollection()
+    )
+
 
 @pytest.fixture
 def mock_db_user_not_found(monkeypatch):
@@ -90,6 +103,23 @@ class TestCategoryCreation:
             "/categories/", json={"name": "Entertainment"}
         )
         assert response.status_code == 422
+    
+    @patch(
+        "api.routers.categories.verify_token",
+        return_value="507f1f77bcf86cd799439011",
+    )
+    async def test_create_category_no_categories_field(
+        self,
+        mock_verify_token,
+        async_client_auth: AsyncClient,
+        mock_db_user_no_categories,
+    ):
+        response = await async_client_auth.post(
+            "/categories/",
+            json={"name": "FirstCategory", "monthly_budget": 100.0},
+        )
+        assert response.status_code == 200, response.json()
+        assert response.json()["message"] == "Category created successfully"
 
 
 @pytest.mark.anyio
@@ -261,6 +291,20 @@ class TestGetCategories:
         assert response.status_code == 200, response.json()
         assert isinstance(response.json()["categories"], dict)
         assert len(response.json()["categories"]) >= 10
+    
+    @patch(
+        "api.routers.categories.verify_token",
+        return_value="507f1f77bcf86cd799439011",
+    )
+    async def test_get_all_categories_no_categories_field(
+        self,
+        mock_verify_token,
+        async_client_auth: AsyncClient,
+        mock_db_user_no_categories,
+    ):
+        response = await async_client_auth.get("/categories/")
+        assert response.status_code == 200, response.json()
+        assert response.json()["categories"] == []
 
 
 @pytest.mark.anyio
