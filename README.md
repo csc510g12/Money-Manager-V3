@@ -30,7 +30,7 @@ A REST API application for managing expenses. Build your own automation—be it 
 
 ✅ Quality
 
-[![Pre-commit](https://github.com/csc510g12/project2/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/csc510g12/project2/actions/workflows/pre-commit.yml) [![Pytest](https://github.com/csc510g12/project2/actions/workflows/pytest.yml/badge.svg)](https://github.com/csc510g12/project2/actions/workflows/pytest.yml) [![codecov](https://codecov.io/gh/csc510g12/Money-Manager-V3/graph/badge.svg?token=HxVOHc7Prp)](https://app.codecov.io/gh/csc510g12/Money-Manager-V3) [![badge_total_tests](https://img.shields.io/badge/tests-203-blue?style=plastic&logo=pytest&logoColor=white)](https://github.com/csc510g12/project2/tree/main/tests)
+[![Pre-commit](https://github.com/csc510g12/project2/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/csc510g12/project2/actions/workflows/pre-commit.yml) [![Pytest](https://github.com/csc510g12/project2/actions/workflows/pytest.yml/badge.svg)](https://github.com/csc510g12/project2/actions/workflows/pytest.yml) [![codecov](https://codecov.io/gh/csc510g12/Money-Manager-V3/graph/badge.svg?token=HxVOHc7Prp)](https://app.codecov.io/gh/csc510g12/Money-Manager-V3) [![badge_total_tests](https://img.shields.io/badge/tests-218-blue?style=plastic&logo=pytest&logoColor=white)](https://github.com/csc510g12/project2/tree/main/tests)
 
 
 Code coverage graph:
