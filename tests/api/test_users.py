@@ -297,3 +297,4 @@ class TestUserDelete:
         assert (
             response.json()["message"] == "User deleted successfully"
         ), response.json()
+
